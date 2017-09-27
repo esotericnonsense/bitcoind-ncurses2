@@ -184,8 +184,11 @@ class MonitorView(object):
         except KeyError:
             return
 
-        b, fr = estimatesmartfee["blocks"], estimatesmartfee["feerate"]
-        self._estimatesmartfee[b] = fr
+        try:
+            b, fr = estimatesmartfee["blocks"], estimatesmartfee["feerate"]
+            self._estimatesmartfee[b] = fr
+        except KeyError:
+            self._estimatesmartfee = None
 
         if self._visible:
             await self.draw()
