@@ -4,7 +4,7 @@
 
 import curses
 
-from macros import MODES
+from macros import MODES, MIN_WINDOW_SIZE
 
 
 class FooterView(object):
@@ -15,6 +15,8 @@ class FooterView(object):
         self._dt = None
 
         self._callbacks = set()
+
+        self._window_size = MIN_WINDOW_SIZE
 
     def add_callback(self, callback):
         self._callbacks.add(callback)
@@ -43,7 +45,15 @@ class FooterView(object):
         if self._dt:
             self._pad.addstr(0, 81, self._dt.isoformat(timespec="seconds")[:19])
 
-        self._pad.refresh(0, 0, 25, 0, 27, 100)
+        self._draw_pad_to_screen()
+
+    def _draw_pad_to_screen(self):
+        maxy, maxx = self._window_size
+        if maxy < 5 or maxx < 3:
+            # Can't do it
+            return
+
+        self._pad.refresh(0, 0, maxy-2, 0, maxy, min(maxx-1, 100))
 
     async def on_mode_change(self, newmode, seek=None):
         if seek is not None:
@@ -62,4 +72,13 @@ class FooterView(object):
 
     async def on_tick(self, dt):
         self._dt = dt
+        self.draw()
+
+    async def on_window_resize(self, y, x):
+        # At the moment we ignore the x size and limit to 100.
+        if y > self._window_size[0] and self._pad:
+            self._pad.clear()
+            self._draw_pad_to_screen()
+
+        self._window_size = (y, x)
         self.draw()

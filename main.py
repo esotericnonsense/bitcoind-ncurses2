@@ -17,9 +17,14 @@ import peers
 from macros import MODES, DEFAULT_MODE
 
 
-async def handle_hotkeys(window, callback):
+async def handle_hotkeys(window, callback, resize_callback):
 
     async def handle_key(key):
+        if key == "KEY_RESIZE":
+            y, x = window.getmaxyx()
+            await resize_callback(y, x)
+            return
+
         if key == "KEY_LEFT":
             await callback(None, seek=-1)
             return
@@ -123,6 +128,20 @@ def create_tasks(client, window):
         await footerview.on_tick(dt)
         await monitorview.on_tick(dt)
 
+    async def on_window_resize(y, x):
+        interface.check_min_window_size(y, x)
+
+        await headerview.on_window_resize(y, x)
+        await footerview.on_window_resize(y, x)
+        await monitorview.on_window_resize(y, x)
+        await peerview.on_window_resize(y, x)
+
+    # Set the initial window sizes
+    ty, tx = window.getmaxyx()
+    loop2 = asyncio.new_event_loop()
+    loop2.run_until_complete(on_window_resize(ty, tx))
+    loop2.close()
+
     tasks = [
         poll_client(client, "getbestblockhash",
                     monitorview.on_bestblockhash, 1.0),
@@ -135,7 +154,7 @@ def create_tasks(client, window):
         poll_client(client, "getpeerinfo",
                     on_peerinfo, 5.0),
         tick(on_tick, 1.0),
-        handle_hotkeys(window, footerview.on_mode_change)
+        handle_hotkeys(window, footerview.on_mode_change, on_window_resize)
     ]
 
     if not check_disablewallet(client):

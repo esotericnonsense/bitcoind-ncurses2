@@ -5,7 +5,7 @@
 import curses
 import platform
 
-from macros import VERSION_STRING
+from macros import VERSION_STRING, MIN_WINDOW_SIZE
 
 
 class HeaderView(object):
@@ -25,6 +25,8 @@ class HeaderView(object):
         self._connectioncount = None
         self._nettotals = None
         self._balance = None
+
+        self._window_size = MIN_WINDOW_SIZE
 
     def draw(self):
         # TODO: figure out window width etc.
@@ -103,7 +105,15 @@ class HeaderView(object):
         else:
             self._pad.addstr(0, 74, "wallet disabled")
 
-        self._pad.refresh(0, 0, 1, 0, 2, 100)
+        self._draw_pad_to_screen()
+
+    def _draw_pad_to_screen(self):
+        maxy, maxx = self._window_size
+        if maxy < 3 or maxx < 3:
+            # can't do it
+            return
+
+        self._pad.refresh(0, 0, 1, 0, min(maxy, 2), min(maxx-1, 100))
 
     async def on_networkinfo(self, key, obj):
         try:
@@ -148,4 +158,9 @@ class HeaderView(object):
         except KeyError:
             pass
 
+        self.draw()
+
+    async def on_window_resize(self, y, x):
+        # At the moment we ignore the x size and limit to 100.
+        self._window_size = (y, x)
         self.draw()

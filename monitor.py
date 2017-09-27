@@ -8,6 +8,8 @@ import curses
 import asyncio
 from decimal import Decimal
 
+from macros import MIN_WINDOW_SIZE
+
 
 class MonitorView(object):
     def __init__(self, client):
@@ -23,6 +25,8 @@ class MonitorView(object):
         self._bestblock = None  # raw json block
         self._bestcoinbase = None  # raw json tx
         self._dt = None
+
+        self._window_size = MIN_WINDOW_SIZE
 
     def _draw(self):
         # TODO: figure out window width etc.
@@ -109,7 +113,14 @@ class MonitorView(object):
                 math.log(int(bb["chainwork"], 16), 2),
             ))
 
-        self._pad.refresh(0, 0, 4, 0, 24, 100)
+        self._draw_pad_to_screen()
+
+    def _draw_pad_to_screen(self):
+        maxy, maxx = self._window_size
+        if maxy < 8 or maxx < 3:
+            return # Can't do it
+
+        self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
 
     async def draw(self):
         with await self._lock:
@@ -153,3 +164,9 @@ class MonitorView(object):
 
         self._visible = True
         await self.draw()
+
+    async def on_window_resize(self, y, x):
+        # At the moment we ignore the x size and limit to 100.
+        self._window_size = (y, x)
+        if self._visible:
+            await self.draw()

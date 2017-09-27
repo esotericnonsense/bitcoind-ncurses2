@@ -4,6 +4,8 @@
 
 import curses
 
+from macros import MIN_WINDOW_SIZE
+
 
 def init_curses():
     window = curses.initscr()
@@ -26,3 +28,11 @@ def init_curses():
 def end_curses():
     curses.nocbreak()
     curses.endwin()
+
+
+def check_min_window_size(y, x):
+    if (y < MIN_WINDOW_SIZE[0]):
+        raise Exception("Window is too small, {} < {}".format(y, MIN_WINDOW_SIZE[0]))
+
+    if (x < MIN_WINDOW_SIZE[1]):
+        raise Exception("Window is too small, {} < {}".format(x, MIN_WINDOW_SIZE[1]))

@@ -8,12 +8,15 @@ import math
 import curses
 import asyncio
 
+from macros import MIN_WINDOW_SIZE
 
 class PeersView(object):
     def __init__(self):
         self._pad = None
         self._visible = False
         self._peerinfo = None  # raw data from getpeerinfo
+
+        self._window_size = MIN_WINDOW_SIZE
 
     def draw(self):
         # TODO: figure out window width etc.
@@ -85,7 +88,14 @@ class PeersView(object):
                         if 'synced_headers' in peer:
                           self._pad.addstr(1+index-offset, 93, str(peer['synced_headers']).rjust(7)    )
 
-        self._pad.refresh(0, 0, 4, 0, 24, 100)
+        self._draw_pad_to_screen()
+
+    def _draw_pad_to_screen(self):
+        maxy, maxx = self._window_size
+        if maxy < 8 or maxx < 3:
+            return # Can't do it
+
+        self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
 
     async def on_peerinfo(self, key, obj):
         try:
@@ -103,3 +113,9 @@ class PeersView(object):
 
         self._visible = True
         self.draw()
+
+    async def on_window_resize(self, y, x):
+        # At the moment we ignore the x size and limit to 100.
+        self._window_size = (y, x)
+        if self._visible:
+            await self.draw()
