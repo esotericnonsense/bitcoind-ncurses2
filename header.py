@@ -53,7 +53,7 @@ class HeaderView(object):
         currency = currencies.get(self._chain, "???")
         chn = self._chain if self._chain is not None else "???"
 
-        self._pad.addstr(0, 1, "{} ({})".format(
+        self._pad.addstr(0, 1, "{} {}".format(
             VERSION_STRING[:30],
             chn
         ), version_color)
