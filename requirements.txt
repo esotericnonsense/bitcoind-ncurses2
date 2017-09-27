@@ -1,0 +1,2 @@
+aiohttp>=2.2.5
+async-timeout>=1.4.0
