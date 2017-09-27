@@ -29,6 +29,7 @@ class FooterView(object):
             self._pad.clear()
 
         CYELLOW = curses.color_pair(5)
+        CBOLD = curses.A_BOLD
         CREVERSE = curses.A_REVERSE
 
         x = 1
@@ -40,10 +41,10 @@ class FooterView(object):
                 modifier += CREVERSE
             self._pad.addstr(0, x, first_char, modifier + CYELLOW)
             self._pad.addstr(0, x+1, rest, modifier)
-            x += len(mode_string) + 4
+            x += len(mode_string) + 5
 
         if self._dt:
-            self._pad.addstr(0, 81, self._dt.isoformat(timespec="seconds")[:19])
+            self._pad.addstr(0, 81, self._dt.isoformat(timespec="seconds")[:19], CYELLOW + CBOLD)
 
         self._draw_pad_to_screen()
 
