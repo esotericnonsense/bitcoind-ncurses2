@@ -25,6 +25,7 @@ class MonitorView(object):
         self._bestblock = None  # raw json block
         self._bestcoinbase = None  # raw json tx
         self._mempoolinfo = None  # raw mempoolinfo
+        self._estimatesmartfee = {} # blocks -> feerate/kB
         self._dt = None
 
         self._window_size = MIN_WINDOW_SIZE
@@ -120,6 +121,13 @@ class MonitorView(object):
                 self._mempoolinfo["bytes"] / 1048576,
             ))
 
+        if self._estimatesmartfee:
+            estimates = " ".join(
+                    "({: 2d}: {: 8.0f} sat/kB)".format(b, fr*10**8)
+                for b, fr in sorted(self._estimatesmartfee.items())
+            )
+            self._pad.addstr(11, 1, "estimatesmartfee: {}".format(estimates))
+
         self._draw_pad_to_screen()
 
     def _draw_pad_to_screen(self):
@@ -162,6 +170,18 @@ class MonitorView(object):
             self._mempoolinfo = obj["result"]
         except KeyError:
             return
+
+        if self._visible:
+            await self.draw()
+
+    async def on_estimatesmartfee(self, key, obj):
+        try:
+            estimatesmartfee = obj["result"]
+        except KeyError:
+            return
+
+        b, fr = estimatesmartfee["blocks"], estimatesmartfee["feerate"]
+        self._estimatesmartfee[b] = fr
 
         if self._visible:
             await self.draw()

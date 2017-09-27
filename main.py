@@ -60,12 +60,12 @@ async def handle_hotkeys(window, callback, resize_callback):
         await handle_key(key)
 
 
-async def poll_client(client, method, callback, sleeptime):
+async def poll_client(client, method, callback, sleeptime, params=None):
     # Allow the rest of the program to start.
     await asyncio.sleep(0.1)
 
     while True:
-        j = await client.request(method)
+        j = await client.request(method, params=params)
         await callback(method, j)
         await asyncio.sleep(sleeptime)
 
@@ -155,6 +155,12 @@ def create_tasks(client, window):
                     on_peerinfo, 5.0),
         poll_client(client, "getmempoolinfo",
                     monitorview.on_mempoolinfo, 5.0),
+        poll_client(client, "estimatesmartfee",
+                    monitorview.on_estimatesmartfee, 15.0, params=[2]),
+        poll_client(client, "estimatesmartfee",
+                    monitorview.on_estimatesmartfee, 15.0, params=[5]),
+        poll_client(client, "estimatesmartfee",
+                    monitorview.on_estimatesmartfee, 15.0, params=[10]),
         tick(on_tick, 1.0),
         handle_hotkeys(window, footerview.on_mode_change, on_window_resize)
     ]
