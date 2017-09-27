@@ -119,6 +119,8 @@ def create_tasks(client, window):
     modehandler.add_callback("peers", peerview.on_mode_change)
     modehandler.add_callback("block", blockview.on_mode_change)
 
+    modehandler.add_keypress_handler("block", blockview.handle_keypress)
+
     async def on_bestblockhash(key, obj):
         await monitorview.on_bestblockhash(key, obj)
         await blockview.on_bestblockhash(key, obj)

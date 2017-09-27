@@ -18,6 +18,7 @@ class BlockStore(object):
         self._lock = asyncio.Lock()
 
         self._blocks = {}  # hash -> raw block (full details)
+        self._bestblockhash = None
 
     async def get_block(self, blockhash):
         with await self._lock:
@@ -36,6 +37,71 @@ class BlockStore(object):
             except KeyError:
                 raise
 
+    async def get_nextblockhash(self, blockhash):
+        with await self._lock:
+            try:
+                return self._blocks[blockhash]["nextblockhash"]
+            except KeyError:
+                raise
+
+    async def get_previousblockhash_n(self, blockhash, n):
+        if n <= 0:
+            raise TypeError
+
+        # This is based on height.
+        with await self._lock:
+            try:
+                block = self._blocks[blockhash]
+            except KeyError:
+                raise
+
+        if block["height"] < n:
+            raise KeyError
+
+        j = await self._client.request("getblockhash", [block["height"] - n])
+
+        try:
+            return j["result"]
+        except KeyError:
+            raise
+
+    async def get_nextblockhash_n(self, blockhash, n):
+        if n <= 0:
+            raise TypeError
+
+        # This is based on height.
+        with await self._lock:
+            try:
+                block = self._blocks[blockhash]
+            except KeyError:
+                raise
+
+            try:
+                bestblock = self._blocks[self._bestblockhash]
+            except KeyError:
+                raise
+
+        if bestblock["height"] - block["height"] < n:
+            raise KeyError
+
+        j = await self._client.request("getblockhash", [block["height"] + n])
+
+        try:
+            return j["result"]
+        except KeyError:
+            raise
+
+    async def on_bestblockhash(self, blockhash):
+        with await self._lock:
+            self._bestblockhash = blockhash
+            # TODO: if the previous block exists, update its' nextblockhash
+
+    async def get_bestblockhash(self):
+        with await self._lock:
+            if self._bestblockhash is None:
+                raise KeyError
+
+            return self._bestblockhash
 
 class BlockView(object):
     def __init__(self, blockstore):
@@ -49,7 +115,7 @@ class BlockView(object):
 
         self._window_size = MIN_WINDOW_SIZE
 
-    def _draw(self, block):
+    def _draw(self, block, bestblockhash):
         # TODO: figure out window width etc.
 
         if self._pad is not None:
@@ -58,23 +124,28 @@ class BlockView(object):
             self._pad = curses.newpad(20, 100)
 
         CGREEN = curses.color_pair(1)
-        CCYAN = curses.color_pair(2)
-        CRED = curses.color_pair(3)
         CYELLOW = curses.color_pair(5)
         CBOLD = curses.A_BOLD
 
         if block:
-            #self._pad.addstr(0, 1, "height: " + str(block["height"]).zfill(6) + "    (J/K: browse, HOME/END: quicker, L: latest, G: seek)", CBOLD)
-            self._pad.addstr(0, 1, "Height: {}".format(block["height"]), CBOLD)
-            self._pad.addstr(0, 30, "Hash: {}".format(block["hash"]), CBOLD)
-            self._pad.addstr(1, 28, "Merkle: {}".format(block["merkleroot"]), CBOLD)
-            self._pad.addstr(1, 1, "Size: {} bytes".format(block["size"]), CBOLD)
-            self._pad.addstr(2, 1, "Weight: {} WU".format(block["weight"]), CBOLD)
-            self._pad.addstr(2, 28, "Difficulty: {:,d}".format(int(block["difficulty"])), CBOLD)
-            self._pad.addstr(2, 70, "Timestamp: {}".format(
+            self._pad.addstr(0, 59, "[J/K: browse, HOME/END: quicker, L: best]", CYELLOW)
+            self._pad.addstr(1, 1, "Height: {}".format(block["height"]), CBOLD)
+            self._pad.addstr(1, 30, "Hash: {}".format(block["hash"]), CBOLD)
+            self._pad.addstr(2, 30, "Prev: {}".format(block["previousblockhash"]), CBOLD)
+
+            if "nextblockhash" in block:
+                self._pad.addstr(3, 30, "Next: {}".format(block["nextblockhash"]), CBOLD)
+            elif block["hash"] == bestblockhash:
+                self._pad.addstr(3, 60, "best block!", CBOLD + CGREEN)
+
+            self._pad.addstr(4, 28, "Merkle: {}".format(block["merkleroot"]), CBOLD)
+            self._pad.addstr(2, 1, "Size: {} bytes".format(block["size"]), CBOLD)
+            self._pad.addstr(3, 1, "Weight: {} WU".format(block["weight"]), CBOLD)
+            self._pad.addstr(5, 28, "Difficulty: {:,d}".format(int(block["difficulty"])), CBOLD)
+            self._pad.addstr(5, 70, "Timestamp: {}".format(
                 datetime.datetime.utcfromtimestamp(block["time"]).isoformat(timespec="seconds")
             ), CBOLD)
-            self._pad.addstr(3, 81, "Version: 0x{}".format(block["versionHex"]), CBOLD)
+            self._pad.addstr(6, 81, "Version: 0x{}".format(block["versionHex"]), CBOLD)
 
         self._draw_pad_to_screen()
 
@@ -85,12 +156,72 @@ class BlockView(object):
 
         self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
 
+    async def _select_previous_block(self):
+        if self._hash is None:
+            return # Can't do anything
+
+        try:
+            self._hash = await self._blockstore.get_previousblockhash(self._hash)
+        except KeyError:
+            return # Can't do anything
+
+        await self.draw()
+
+    async def _select_next_block(self):
+        if self._hash is None:
+            return # Can't do anything
+
+        try:
+            self._hash = await self._blockstore.get_nextblockhash(self._hash)
+        except KeyError:
+            return # Can't do anything
+
+        await self.draw()
+
+    async def _select_previous_block_n(self, n):
+        if self._hash is None:
+            return # Can't do anything
+
+        try:
+            self._hash = await self._blockstore.get_previousblockhash_n(self._hash, n)
+        except KeyError:
+            return # Can't do anything
+
+        await self.draw()
+
+    async def _select_next_block_n(self, n):
+        if self._hash is None:
+            return # Can't do anything
+
+        try:
+            self._hash = await self._blockstore.get_nextblockhash_n(self._hash, n)
+        except KeyError:
+            return # Can't do anything
+
+        await self.draw()
+
+    async def _select_best_block(self):
+        if self._hash is None:
+            return # Can't do anything
+
+        try:
+            self._hash = await self._blockstore.get_bestblockhash()
+        except KeyError:
+            return # Can't do anything
+
+        await self.draw()
+
     async def draw(self):
+        if not self._visible:
+            return
+
         block = None
+        bestblockhash = None
         if self._hash:
             block = await self._blockstore.get_block(self._hash)
+            bestblockhash = await self._blockstore.get_bestblockhash()
 
-        self._draw(block)
+        self._draw(block, bestblockhash)
 
     async def on_bestblockhash(self, key, obj):
         try:
@@ -98,12 +229,14 @@ class BlockView(object):
         except KeyError:
             return
 
+        await self._blockstore.on_bestblockhash(bestblockhash)
+
         # If we have no browse hash, set it to the best.
         if self._hash is None:
             self._hash = bestblockhash
 
-            if self._visible:
-                await self.draw()
+        # Redraw so that we know if it's the best
+        await self.draw()
 
     async def on_mode_change(self, newmode):
         if newmode != "block":
@@ -118,3 +251,28 @@ class BlockView(object):
         self._window_size = (y, x)
         if self._visible:
             await self.draw()
+
+    async def handle_keypress(self, key):
+        assert self._visible
+
+        if key.lower() == "j":
+            await self._select_previous_block()
+            return None
+
+        if key.lower() == "k":
+            await self._select_next_block()
+            return None
+
+        if key == "KEY_HOME":
+            await self._select_previous_block_n(1000)
+            return None
+
+        if key == "KEY_END":
+            await self._select_next_block_n(1000)
+            return None
+
+        if key.lower() == "l":
+            await self._select_best_block()
+            return None
+
+        return key
