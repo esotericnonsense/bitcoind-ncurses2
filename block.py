@@ -124,28 +124,35 @@ class BlockView(object):
             self._pad = curses.newpad(20, 100)
 
         CGREEN = curses.color_pair(1)
+        CRED = curses.color_pair(3)
         CYELLOW = curses.color_pair(5)
         CBOLD = curses.A_BOLD
 
         if block:
             self._pad.addstr(0, 59, "[J/K: browse, HOME/END: quicker, L: best]", CYELLOW)
-            self._pad.addstr(1, 1, "Height: {}".format(block["height"]), CBOLD)
-            self._pad.addstr(1, 30, "Hash: {}".format(block["hash"]), CBOLD)
-            self._pad.addstr(2, 30, "Prev: {}".format(block["previousblockhash"]), CBOLD)
+
+            self._pad.addstr(0, 1, "Time {}".format(
+                datetime.datetime.utcfromtimestamp(block["time"]).isoformat(timespec="seconds")
+            ), CBOLD)
+            self._pad.addstr(0, 31, "Height {}".format(block["height"]), CBOLD)
+
+            self._pad.addstr(1, 1, "Size {} bytes".format(block["size"]), CBOLD)
+            self._pad.addstr(2, 1, "Weight {} WU".format(block["weight"]), CBOLD)
+            self._pad.addstr(3, 1, "Diff {:,d}".format(int(block["difficulty"])), CBOLD)
+            self._pad.addstr(4, 1, "Version 0x{}".format(block["versionHex"]), CBOLD)
+
+            self._pad.addstr(1, 31, "Hash {}".format(block["hash"]), CBOLD)
+            if "previousblockhash" in block:
+                self._pad.addstr(2, 31, "Prev {}".format(block["previousblockhash"]), CBOLD)
+            else:
+                self._pad.addstr(2, 60, "genesis block!", CBOLD + CRED)
 
             if "nextblockhash" in block:
-                self._pad.addstr(3, 30, "Next: {}".format(block["nextblockhash"]), CBOLD)
+                self._pad.addstr(3, 31, "Next {}".format(block["nextblockhash"]), CBOLD)
             elif block["hash"] == bestblockhash:
                 self._pad.addstr(3, 60, "best block!", CBOLD + CGREEN)
 
-            self._pad.addstr(4, 28, "Merkle: {}".format(block["merkleroot"]), CBOLD)
-            self._pad.addstr(2, 1, "Size: {} bytes".format(block["size"]), CBOLD)
-            self._pad.addstr(3, 1, "Weight: {} WU".format(block["weight"]), CBOLD)
-            self._pad.addstr(5, 28, "Difficulty: {:,d}".format(int(block["difficulty"])), CBOLD)
-            self._pad.addstr(5, 70, "Timestamp: {}".format(
-                datetime.datetime.utcfromtimestamp(block["time"]).isoformat(timespec="seconds")
-            ), CBOLD)
-            self._pad.addstr(6, 81, "Version: 0x{}".format(block["versionHex"]), CBOLD)
+            self._pad.addstr(4, 31, "Root {}".format(block["merkleroot"]), CBOLD)
 
         self._draw_pad_to_screen()
 
