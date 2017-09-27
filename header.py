@@ -103,7 +103,7 @@ class HeaderView(object):
                     currency,
                 ), CBOLD + CRED)
         else:
-            self._pad.addstr(0, 74, "wallet disabled")
+            self._pad.addstr(0, 85, "wallet disabled", CBOLD + CRED)
 
         self._draw_pad_to_screen()
 
