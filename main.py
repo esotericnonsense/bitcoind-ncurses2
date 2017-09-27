@@ -13,6 +13,7 @@ import header
 import footer
 import monitor
 import peers
+import block
 
 from macros import MODES, DEFAULT_MODE
 
@@ -117,8 +118,17 @@ def create_tasks(client, window):
 
     monitorview = monitor.MonitorView(client)
     peerview = peers.PeersView()
+
+    blockstore = block.BlockStore(client)
+    blockview = block.BlockView(blockstore)
+
     footerview.add_callback(monitorview.on_mode_change)
     footerview.add_callback(peerview.on_mode_change)
+    footerview.add_callback(blockview.on_mode_change)
+
+    async def on_bestblockhash(key, obj):
+        await monitorview.on_bestblockhash(key, obj)
+        await blockview.on_bestblockhash(key, obj)
 
     async def on_peerinfo(key, obj):
         await headerview.on_peerinfo(key, obj)
@@ -135,6 +145,7 @@ def create_tasks(client, window):
         await footerview.on_window_resize(y, x)
         await monitorview.on_window_resize(y, x)
         await peerview.on_window_resize(y, x)
+        await blockview.on_window_resize(y, x)
 
     # Set the initial window sizes
     ty, tx = window.getmaxyx()
@@ -144,7 +155,7 @@ def create_tasks(client, window):
 
     tasks = [
         poll_client(client, "getbestblockhash",
-                    monitorview.on_bestblockhash, 1.0),
+                    on_bestblockhash, 1.0),
         poll_client(client, "getblockchaininfo",
                     headerview.on_blockchaininfo, 5.0),
         poll_client(client, "getnetworkinfo",
