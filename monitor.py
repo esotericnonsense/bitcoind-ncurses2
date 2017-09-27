@@ -27,6 +27,7 @@ class MonitorView(object):
         self._mempoolinfo = None  # raw mempoolinfo
         self._estimatesmartfee = {} # blocks -> feerate/kB
         self._dt = None
+        self._uptime = None # raw uptime from bitcoind (seconds)
 
         self._window_size = MIN_WINDOW_SIZE
 
@@ -128,6 +129,9 @@ class MonitorView(object):
             )
             self._pad.addstr(11, 1, "estimatesmartfee: {}".format(estimates))
 
+        if self._uptime:
+            self._pad.addstr(13, 1, "uptime: {}".format(datetime.timedelta(seconds=self._uptime)))
+
         self._draw_pad_to_screen()
 
     def _draw_pad_to_screen(self):
@@ -189,6 +193,15 @@ class MonitorView(object):
     async def on_tick(self, dt):
         with await self._lock:
             self._dt = dt
+
+        if self._visible:
+            await self.draw()
+
+    async def on_uptime(self, key, obj):
+        try:
+            self._uptime = obj["result"]
+        except KeyError:
+            return
 
         if self._visible:
             await self.draw()

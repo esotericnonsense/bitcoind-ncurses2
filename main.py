@@ -161,6 +161,9 @@ def create_tasks(client, window):
                     monitorview.on_estimatesmartfee, 15.0, params=[5]),
         poll_client(client, "estimatesmartfee",
                     monitorview.on_estimatesmartfee, 15.0, params=[10]),
+        # This is a bit lazy because we could just do it once and calculate it.
+        poll_client(client, "uptime",
+                    monitorview.on_uptime, 5.0, params=[10]),
         tick(on_tick, 1.0),
         handle_hotkeys(window, footerview.on_mode_change, on_window_resize)
     ]
