@@ -94,7 +94,23 @@ class BlockStore(object):
     async def on_bestblockhash(self, blockhash):
         with await self._lock:
             self._bestblockhash = blockhash
-            # TODO: if the previous block exists, update its' nextblockhash
+
+        # Pre-fetch it if necessary and update the previous block
+        # TODO: think about the locking here.
+        block = await self.get_block(blockhash)
+        with await self._lock:
+            try:
+                prevblock = self._blocks[block["previousblockhash"]]
+            except KeyError:
+                return
+
+            if "nextblockhash" in prevblock:
+                if prevblock["nextblockhash"] == blockhash:
+                    return
+
+                raise Exception("BlockStore does not handle re-orgs")
+
+            prevblock["nextblockhash"] = blockhash
 
     async def get_bestblockhash(self):
         with await self._lock:
