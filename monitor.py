@@ -24,6 +24,7 @@ class MonitorView(object):
         self._bestblockheader = None  # raw json blockheader
         self._bestblock = None  # raw json block
         self._bestcoinbase = None  # raw json tx
+        self._mempoolinfo = None  # raw mempoolinfo
         self._dt = None
 
         self._window_size = MIN_WINDOW_SIZE
@@ -113,6 +114,12 @@ class MonitorView(object):
                 math.log(int(bb["chainwork"], 16), 2),
             ))
 
+        if self._mempoolinfo:
+            self._pad.addstr(9, 1, "Mempool transactions: {: 6d} ({: 5.2f} MiB)".format(
+                self._mempoolinfo["size"],
+                self._mempoolinfo["bytes"] / 1048576,
+            ))
+
         self._draw_pad_to_screen()
 
     def _draw_pad_to_screen(self):
@@ -148,6 +155,15 @@ class MonitorView(object):
                 self._bestcoinbase = j["result"]
 
         if draw and self._visible:
+            await self.draw()
+
+    async def on_mempoolinfo(self, key, obj):
+        try:
+            self._mempoolinfo = obj["result"]
+        except KeyError:
+            return
+
+        if self._visible:
             await self.draw()
 
     async def on_tick(self, dt):

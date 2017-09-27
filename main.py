@@ -153,6 +153,8 @@ def create_tasks(client, window):
                     headerview.on_nettotals, 5.0),
         poll_client(client, "getpeerinfo",
                     on_peerinfo, 5.0),
+        poll_client(client, "getmempoolinfo",
+                    monitorview.on_mempoolinfo, 5.0),
         tick(on_tick, 1.0),
         handle_hotkeys(window, footerview.on_mode_change, on_window_resize)
     ]
@@ -168,8 +170,10 @@ def create_tasks(client, window):
 def mainfn():
     client = initialize()
 
+
     try:
         window = interface.init_curses()
+
         tasks = create_tasks(client, window)
 
         loop = asyncio.get_event_loop()
