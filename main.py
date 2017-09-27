@@ -9,39 +9,27 @@ import datetime
 
 import rpc
 import interface
+import modes
 import header
 import footer
 import monitor
 import peers
 import block
 
-from macros import MODES, DEFAULT_MODE
+from macros import DEFAULT_MODE
 
 
-async def handle_hotkeys(window, callback, resize_callback):
-
-    async def handle_key(key):
+async def keypress_loop(window, callback, resize_callback):
+    async def handle_keypress(key):
         if key == "KEY_RESIZE":
             y, x = window.getmaxyx()
             await resize_callback(y, x)
             return
 
-        if key == "KEY_LEFT":
-            await callback(None, seek=-1)
-            return
-
-        if key == "KEY_RIGHT":
-            await callback(None, seek=1)
-            return
-
-        if len(key) > 1:
-            return
-
-        lower = key.lower()
-
-        for mode in MODES:
-            if mode[0] == lower:
-                await callback(mode)
+        key = await callback(key)
+        if key is not None:
+            # hand off key to somewhere else.
+            raise Exception
 
     first = True
     while True:
@@ -52,13 +40,13 @@ async def handle_hotkeys(window, callback, resize_callback):
         except Exception:
             # This is bonkers and I don't understand it.
             if first:
-                await callback(DEFAULT_MODE)
+                await callback(DEFAULT_MODE[0]) # hackery!
                 first = False
 
             await asyncio.sleep(0.05)
             continue
 
-        await handle_key(key)
+        await handle_keypress(key)
 
 
 async def poll_client(client, method, callback, sleeptime, params=None):
@@ -116,15 +104,17 @@ def create_tasks(client, window):
     headerview = header.HeaderView()
     footerview = footer.FooterView()
 
+    modehandler = modes.ModeHandler(footerview.on_mode_change)
+
     monitorview = monitor.MonitorView(client)
     peerview = peers.PeersView()
 
     blockstore = block.BlockStore(client)
     blockview = block.BlockView(blockstore)
 
-    footerview.add_callback(monitorview.on_mode_change)
-    footerview.add_callback(peerview.on_mode_change)
-    footerview.add_callback(blockview.on_mode_change)
+    modehandler.add_callback("monitor", monitorview.on_mode_change)
+    modehandler.add_callback("peers", peerview.on_mode_change)
+    modehandler.add_callback("block", blockview.on_mode_change)
 
     async def on_bestblockhash(key, obj):
         await monitorview.on_bestblockhash(key, obj)
@@ -176,7 +166,7 @@ def create_tasks(client, window):
         poll_client(client, "uptime",
                     monitorview.on_uptime, 5.0, params=[10]),
         tick(on_tick, 1.0),
-        handle_hotkeys(window, footerview.on_mode_change, on_window_resize)
+        keypress_loop(window, modehandler.handle_keypress, on_window_resize)
     ]
 
     if not check_disablewallet(client):

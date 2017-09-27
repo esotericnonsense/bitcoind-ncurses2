@@ -14,12 +14,7 @@ class FooterView(object):
         self._mode = None
         self._dt = None
 
-        self._callbacks = set()
-
         self._window_size = MIN_WINDOW_SIZE
-
-    def add_callback(self, callback):
-        self._callbacks.add(callback)
 
     def draw(self):
         # TODO: figure out window width etc.
@@ -56,20 +51,12 @@ class FooterView(object):
 
         self._pad.refresh(0, 0, maxy-2, 0, maxy, min(maxx-1, 100))
 
-    async def on_mode_change(self, newmode, seek=None):
-        if seek is not None:
-            assert newmode is None
-            if self._mode is None:
-                return
-            idx = MODES.index(self._mode)
-            idx = (idx + seek) % len(MODES)
-            newmode = MODES[idx]
+    async def on_mode_change(self, newmode):
+        if self._mode == newmode:
+            return
 
         self._mode = newmode
         self.draw()
-
-        for callback in self._callbacks:
-            await callback(newmode)
 
     async def on_tick(self, dt):
         self._dt = dt
