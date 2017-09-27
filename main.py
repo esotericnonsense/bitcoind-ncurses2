@@ -26,10 +26,13 @@ async def keypress_loop(window, callback, resize_callback):
             await resize_callback(y, x)
             return
 
+        if len(key) == 1 and key.lower() == "q":
+            raise Exception("Quitting.")
+
         key = await callback(key)
         if key is not None:
-            # hand off key to somewhere else.
-            raise Exception
+            # Unhandled key. Don't care.
+            pass
 
     first = True
     while True:
