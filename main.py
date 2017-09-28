@@ -35,18 +35,12 @@ async def keypress_loop(window, callback, resize_callback):
             # Unhandled key. Don't care.
             pass
 
-    # first = True
     while True:
         # This is basically spinning which is really annoying.
         # TODO: find a way of having async blocking getch/getkey.
         try:
             key = window.getkey()
         except Exception:
-            # This is bonkers and I don't understand it.
-            # if first:
-            #     await callback(DEFAULT_MODE[0]) # hackery!
-            #     first = False
-
             await asyncio.sleep(0.05)
             continue
 
