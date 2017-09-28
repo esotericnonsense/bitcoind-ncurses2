@@ -5,7 +5,7 @@
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE
+from macros import MIN_WINDOW_SIZE, DEFAULT_MODE
 
 import time
 
@@ -69,7 +69,7 @@ class SplashView(object):
             self._pad.clear()
             await self._draw_pad_to_screen()
 
-        await self._set_mode_callback("monitor")
+        await self._set_mode_callback(DEFAULT_MODE)
 
     async def _draw_pad_to_screen(self):
         maxy, maxx = self._window_size

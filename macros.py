@@ -9,6 +9,6 @@ VERSION_STRING = "bitcoind-ncurses v0.2.0-dev"
 #     "tx", "console", "net", "forks",
 # ]
 MODES = ["monitor", "peers", "block"]
-# DEFAULT_MODE = "monitor"
+DEFAULT_MODE = "monitor"
 
 MIN_WINDOW_SIZE = (10, 20)
