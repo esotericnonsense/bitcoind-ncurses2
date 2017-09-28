@@ -18,7 +18,7 @@ class PeersView(object):
 
         self._window_size = MIN_WINDOW_SIZE
 
-    def draw(self):
+    async def _draw(self):
         # TODO: figure out window width etc.
 
         if self._pad is not None:
@@ -88,9 +88,13 @@ class PeersView(object):
                         if 'synced_headers' in peer:
                           self._pad.addstr(1+index-offset, 93, str(peer['synced_headers']).rjust(7)    )
 
-        self._draw_pad_to_screen()
+        await self._draw_pad_to_screen()
 
-    def _draw_pad_to_screen(self):
+    async def draw(self):
+        if self._visible:
+            await self._draw()
+
+    async def _draw_pad_to_screen(self):
         maxy, maxx = self._window_size
         if maxy < 8 or maxx < 3:
             return # Can't do it
@@ -103,8 +107,7 @@ class PeersView(object):
         except KeyError:
             return
 
-        if self._visible:
-            self.draw()
+        await self.draw()
 
     async def on_mode_change(self, newmode):
         if newmode != "peers":
@@ -112,10 +115,9 @@ class PeersView(object):
             return
 
         self._visible = True
-        self.draw()
+        await self.draw()
 
     async def on_window_resize(self, y, x):
         # At the moment we ignore the x size and limit to 100.
         self._window_size = (y, x)
-        if self._visible:
-            await self.draw()
+        await self.draw()

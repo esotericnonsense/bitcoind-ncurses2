@@ -20,6 +20,8 @@ class HeaderView(object):
             platform.machine(),
         )
 
+        self._mode = None
+
         self._subversion = None
         self._chain = None
         self._connectioncount = None
@@ -28,7 +30,9 @@ class HeaderView(object):
 
         self._window_size = MIN_WINDOW_SIZE
 
-    def draw(self):
+        self._visible = False
+
+    async def _draw(self):
         # TODO: figure out window width etc.
 
         self._pad.clear()
@@ -105,9 +109,20 @@ class HeaderView(object):
         else:
             self._pad.addstr(0, 85, "wallet disabled", CBOLD + CRED)
 
-        self._draw_pad_to_screen()
+        await self._draw_pad_to_screen()
 
-    def _draw_pad_to_screen(self):
+    async def draw(self):
+        if self._mode is not None and self._mode != "splash":
+            await self._draw()
+
+    async def on_mode_change(self, newmode):
+        if self._mode == newmode:
+            return
+
+        self._mode = newmode
+        await self.draw()
+
+    async def _draw_pad_to_screen(self):
         maxy, maxx = self._window_size
         if maxy < 3 or maxx < 3:
             # can't do it
@@ -121,7 +136,7 @@ class HeaderView(object):
         except KeyError:
             pass
 
-        self.draw()
+        await self.draw()
 
     async def on_blockchaininfo(self, key, obj):
         try:
@@ -129,7 +144,7 @@ class HeaderView(object):
         except KeyError:
             pass
 
-        self.draw()
+        await self.draw()
 
     async def on_peerinfo(self, key, obj):
         try:
@@ -137,7 +152,7 @@ class HeaderView(object):
         except KeyError:
             pass
 
-        self.draw()
+        await self.draw()
 
     async def on_nettotals(self, key, obj):
         try:
@@ -147,7 +162,7 @@ class HeaderView(object):
         except KeyError:
             pass
 
-        self.draw()
+        await self.draw()
 
     async def on_walletinfo(self, key, obj):
         try:
@@ -158,9 +173,9 @@ class HeaderView(object):
         except KeyError:
             pass
 
-        self.draw()
+        await self.draw()
 
     async def on_window_resize(self, y, x):
         # At the moment we ignore the x size and limit to 100.
         self._window_size = (y, x)
-        self.draw()
+        await self.draw()

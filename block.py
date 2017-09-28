@@ -131,7 +131,7 @@ class BlockView(object):
 
         self._window_size = MIN_WINDOW_SIZE
 
-    def _draw(self, block, bestblockhash):
+    async def _draw(self, block, bestblockhash):
         # TODO: figure out window width etc.
 
         if self._pad is not None:
@@ -170,9 +170,9 @@ class BlockView(object):
 
             self._pad.addstr(4, 31, "Root {}".format(block["merkleroot"]), CBOLD)
 
-        self._draw_pad_to_screen()
+        await self._draw_pad_to_screen()
 
-    def _draw_pad_to_screen(self):
+    async def _draw_pad_to_screen(self):
         maxy, maxx = self._window_size
         if maxy < 8 or maxx < 3:
             return # Can't do it
@@ -244,7 +244,7 @@ class BlockView(object):
             block = await self._blockstore.get_block(self._hash)
             bestblockhash = await self._blockstore.get_bestblockhash()
 
-        self._draw(block, bestblockhash)
+        await self._draw(block, bestblockhash)
 
     async def on_bestblockhash(self, key, obj):
         try:

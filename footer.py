@@ -16,7 +16,9 @@ class FooterView(object):
 
         self._window_size = MIN_WINDOW_SIZE
 
-    def draw(self):
+        self._visible = False
+
+    async def _draw(self):
         # TODO: figure out window width etc.
         if self._pad is None:
             self._pad = curses.newpad(2, 100)
@@ -41,9 +43,13 @@ class FooterView(object):
         if self._dt:
             self._pad.addstr(0, 81, self._dt.isoformat(timespec="seconds")[:19], CYELLOW + CBOLD)
 
-        self._draw_pad_to_screen()
+        await self._draw_pad_to_screen()
 
-    def _draw_pad_to_screen(self):
+    async def draw(self):
+        if self._mode is not None and self._mode != "splash":
+            await self._draw()
+
+    async def _draw_pad_to_screen(self):
         maxy, maxx = self._window_size
         if maxy < 5 or maxx < 3:
             # Can't do it
@@ -56,17 +62,17 @@ class FooterView(object):
             return
 
         self._mode = newmode
-        self.draw()
+        await self.draw()
 
     async def on_tick(self, dt):
         self._dt = dt
-        self.draw()
+        await self.draw()
 
     async def on_window_resize(self, y, x):
         # At the moment we ignore the x size and limit to 100.
         if y > self._window_size[0] and self._pad:
             self._pad.clear()
-            self._draw_pad_to_screen()
+            await self._draw_pad_to_screen()
 
         self._window_size = (y, x)
-        self.draw()
+        await self.draw()

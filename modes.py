@@ -6,11 +6,11 @@ from macros import MODES
 
 
 class ModeHandler(object):
-    def __init__(self, base_callback):
+    def __init__(self, base_callbacks):
         self._mode = None
 
         self._callbacks = {}  # mode -> callback, one per mode.
-        self._base_callback = base_callback
+        self._base_callbacks = base_callbacks
 
         self._keypress_handlers = {}  # mode -> keypress handler.
 
@@ -39,8 +39,9 @@ class ModeHandler(object):
         if cb2 is not None:
             await cb2(newmode)
 
-        # Base callback (generally FooterView)
-        await self._base_callback(newmode)
+        # Base callbacks (FooterView, HeaderView)
+        for bcb in self._base_callbacks:
+            await bcb(newmode)
 
     async def set_mode(self, newmode):
         if self._mode == newmode:

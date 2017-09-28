@@ -10,13 +10,14 @@ import datetime
 import rpc
 import interface
 import modes
+import splash
 import header
 import footer
 import monitor
 import peers
 import block
 
-from macros import DEFAULT_MODE
+# from macros import DEFAULT_MODE
 
 
 async def keypress_loop(window, callback, resize_callback):
@@ -34,7 +35,7 @@ async def keypress_loop(window, callback, resize_callback):
             # Unhandled key. Don't care.
             pass
 
-    first = True
+    # first = True
     while True:
         # This is basically spinning which is really annoying.
         # TODO: find a way of having async blocking getch/getkey.
@@ -42,9 +43,9 @@ async def keypress_loop(window, callback, resize_callback):
             key = window.getkey()
         except Exception:
             # This is bonkers and I don't understand it.
-            if first:
-                await callback(DEFAULT_MODE[0]) # hackery!
-                first = False
+            # if first:
+            #     await callback(DEFAULT_MODE[0]) # hackery!
+            #     first = False
 
             await asyncio.sleep(0.05)
             continue
@@ -78,13 +79,18 @@ def initialize():
     parser.add_argument("--datadir",
                         help="path to bitcoin datadir [~/.bitcoin/]",
                         default=os.path.expanduser("~/.bitcoin/"))
+    parser.add_argument("--no-splash",
+                        help="whether to disable the splash screen [False]",
+                        action='store_true',
+                        dest="nosplash",
+                        default=False)
     args = parser.parse_args()
 
     url = rpc.get_url_from_datadir(args.datadir)
     auth = rpc.get_auth_from_datadir(args.datadir)
     client = rpc.BitcoinRPCClient(url, auth)
 
-    return client
+    return client, args.nosplash
 
 
 def check_disablewallet(client):
@@ -103,11 +109,15 @@ def check_disablewallet(client):
     return False
 
 
-def create_tasks(client, window):
+def create_tasks(client, window, nosplash):
     headerview = header.HeaderView()
     footerview = footer.FooterView()
 
-    modehandler = modes.ModeHandler(footerview.on_mode_change)
+    modehandler = modes.ModeHandler(
+        (headerview.on_mode_change, footerview.on_mode_change, ),
+    )
+
+    splashview = splash.SplashView(modehandler.set_mode)
 
     monitorview = monitor.MonitorView(client)
     peerview = peers.PeersView()
@@ -136,18 +146,14 @@ def create_tasks(client, window):
     async def on_window_resize(y, x):
         interface.check_min_window_size(y, x)
 
+        await splashview.on_window_resize(y, x)
         await headerview.on_window_resize(y, x)
         await footerview.on_window_resize(y, x)
         await monitorview.on_window_resize(y, x)
         await peerview.on_window_resize(y, x)
         await blockview.on_window_resize(y, x)
 
-    # Set the initial window sizes
     ty, tx = window.getmaxyx()
-    loop2 = asyncio.new_event_loop()
-    loop2.run_until_complete(on_window_resize(ty, tx))
-    loop2.close()
-
     tasks = [
         poll_client(client, "getbestblockhash",
                     on_bestblockhash, 1.0),
@@ -171,7 +177,9 @@ def create_tasks(client, window):
         poll_client(client, "uptime",
                     monitorview.on_uptime, 5.0, params=[10]),
         tick(on_tick, 1.0),
-        keypress_loop(window, modehandler.handle_keypress, on_window_resize)
+        keypress_loop(window, modehandler.handle_keypress, on_window_resize),
+        on_window_resize(ty, tx),
+        splashview.draw(nosplash),
     ]
 
     if not check_disablewallet(client):
@@ -183,13 +191,13 @@ def create_tasks(client, window):
 
 
 def mainfn():
-    client = initialize()
+    client, nosplash = initialize()
 
 
     try:
         window = interface.init_curses()
 
-        tasks = create_tasks(client, window)
+        tasks = create_tasks(client, window, nosplash)
 
         loop = asyncio.get_event_loop()
         t = asyncio.gather(*tasks)
