@@ -6,7 +6,7 @@ import datetime
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE
+from macros import MIN_WINDOW_SIZE, TX_VERBOSE_MODE
 
 
 class TransactionStore(object):
@@ -84,7 +84,7 @@ class TransactionView(object):
         # height and weight would be nice.
         # neither are directly accessible.
 
-    async def _draw_inputs(self, transaction):
+    async def _draw_inputs(self, transaction, inouts):
         CGREEN = curses.color_pair(1)
         CRED = curses.color_pair(3)
         CYELLOW = curses.color_pair(5)
@@ -116,6 +116,24 @@ class TransactionView(object):
             # Sequence numbers, perhaps?
             if "coinbase" in inp:
                 inputstr = inp["coinbase"][:76]
+            elif inouts is not None: # TX_VERBOSE_MODE
+                # Find the vout
+                inout = inouts[i]
+                inputstr = "{}".format(str(inout)[:40])
+                spk = inout["scriptPubKey"]
+                if "addresses" in spk:
+                    if len(spk["addresses"]) > 1:
+                        inoutstring = "<{} addresses>".format(len(spk["addresses"]))
+                    elif len(spk["addresses"]) == 1:
+                        inoutstring = spk["addresses"][0].rjust(34)
+                    else:
+                        raise Exception("addresses present in scriptPubKey, but 0 addresses")
+                elif "asm" in spk:
+                    inoutstring = spk["asm"][:34]
+                else:
+                    inoutstring = "???"
+
+                inputstr = "{:05d} {} {: 15.8f} BTC".format(i, inoutstring, inout["value"])
             else:
                 inputstr = "{:05d} {}:{:05d}".format(i, inp["txid"], inp["vout"])
 
@@ -160,7 +178,12 @@ class TransactionView(object):
             # A 1 million BTC output would be rather surprising. Pad to six.
             spk = out["scriptPubKey"]
             if "addresses" in spk:
-                outstring = " ".join(spk["addresses"])[:80]
+                if len(spk["addresses"]) > 1:
+                    outstring = "<{} addresses>".format(len(spk["addresses"]))
+                elif len(spk["addresses"]) == 1:
+                    outstring = spk["addresses"][0].rjust(34)
+                else:
+                    raise Exception("addresses present in scriptPubKey, but 0 addresses")
             elif "asm" in spk:
                 outstring = spk["asm"][:80]
             else:
@@ -173,7 +196,7 @@ class TransactionView(object):
 
             self._pad.addstr(14+i-offset, 1, "{:05d} {} {: 15.8f} BTC".format(i, outstring, out["value"]), outputcolor)
 
-    async def _draw(self, transaction):
+    async def _draw(self, transaction, inouts):
         # TODO: figure out window width etc.
 
         if self._pad is not None:
@@ -184,7 +207,7 @@ class TransactionView(object):
         if transaction:
             await self._draw_transaction(transaction)
             if "vin" in transaction:
-                await self._draw_inputs(transaction)
+                await self._draw_inputs(transaction, inouts)
             if "vout" in transaction:
                 await self._draw_outputs(transaction)
 
@@ -316,10 +339,20 @@ class TransactionView(object):
             return
 
         transaction = None
+        inouts = None
         if self._txid:
             transaction = await self._transactionstore.get_transaction(self._txid)
+            if TX_VERBOSE_MODE:
+                inouts = []
+                for vin in transaction["vin"]:
+                    if not "txid" in vin:
+                        # It's a coinbase
+                        inouts = None
+                        break
+                    prevtx = await self._transactionstore.get_transaction(vin["txid"])
+                    inouts.append(prevtx["vout"][vin["vout"]])
 
-        await self._draw(transaction)
+        await self._draw(transaction, inouts)
 
     async def on_mode_change(self, newmode):
         if newmode != "transaction":
