@@ -120,8 +120,11 @@ class BlockStore(object):
             return self._bestblockhash
 
 class BlockView(object):
-    def __init__(self, blockstore):
+    def __init__(self, blockstore, txidsetter, modesetter):
         self._blockstore = blockstore
+
+        self._txidsetter = txidsetter
+        self._modesetter = modesetter
 
         self._pad = None
 
@@ -275,7 +278,24 @@ class BlockView(object):
         await self.draw()
 
     async def _enter_transaction_view(self):
-        raise NotImplementedError("Transaction view is not yet implemented")
+        if self._hash is None:
+            return # Can't do anything
+
+        if self._selected_tx == None or self._selected_tx[1] != self._hash:
+            return # Can't do anything
+
+        if self._tx_offset == None or self._tx_offset[1] != self._hash:
+            return # This shouldn't matter, but skip anyway
+
+        try:
+            block = await self._blockstore.get_block(self._hash)
+        except KeyError:
+            return # Can't do anything
+
+        txid = block["tx"][self._selected_tx[0]]
+
+        await self._txidsetter(txid)
+        await self._modesetter("transaction")
 
     async def _select_previous_block(self):
         if self._hash is None:

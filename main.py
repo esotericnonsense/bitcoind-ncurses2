@@ -16,6 +16,7 @@ import footer
 import monitor
 import peers
 import block
+import transaction
 
 # from macros import DEFAULT_MODE
 
@@ -116,14 +117,23 @@ def create_tasks(client, window, nosplash):
     monitorview = monitor.MonitorView(client)
     peerview = peers.PeersView()
 
+    transactionstore = transaction.TransactionStore(client)
+    transactionview = transaction.TransactionView(transactionstore)
+
     blockstore = block.BlockStore(client)
-    blockview = block.BlockView(blockstore)
+    blockview = block.BlockView(
+        blockstore,
+        transactionview.set_txid,
+        modehandler.set_mode,
+    )
 
     modehandler.add_callback("monitor", monitorview.on_mode_change)
     modehandler.add_callback("peers", peerview.on_mode_change)
     modehandler.add_callback("block", blockview.on_mode_change)
+    modehandler.add_callback("transaction", transactionview.on_mode_change)
 
     modehandler.add_keypress_handler("block", blockview.handle_keypress)
+    modehandler.add_keypress_handler("transaction", transactionview.handle_keypress)
 
     async def on_bestblockhash(key, obj):
         await monitorview.on_bestblockhash(key, obj)
@@ -146,6 +156,7 @@ def create_tasks(client, window, nosplash):
         await monitorview.on_window_resize(y, x)
         await peerview.on_window_resize(y, x)
         await blockview.on_window_resize(y, x)
+        await transactionview.on_window_resize(y, x)
 
     ty, tx = window.getmaxyx()
     tasks = [
