@@ -1,6 +1,4 @@
-# bitcoind-ncurses2 v0.2.0-dev
-
-## This repository is under heavy development. Safety not guaranteed.
+# bitcoind-ncurses2 v0.3.0
 
 Python ncurses front-end for bitcoind. Uses the JSON-RPC API.
 
