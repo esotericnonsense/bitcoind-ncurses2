@@ -480,3 +480,13 @@ class BlockView(view.View):
                 return None
 
         return key
+
+    async def on_mode_change(self, newmode):
+        """ Overrides view.View to set the edit mode inactive. """
+        if newmode != self._mode_name:
+            self._edit_mode = False
+            self._visible = False
+            return
+
+        self._visible = True
+        await self._draw_if_visible()
