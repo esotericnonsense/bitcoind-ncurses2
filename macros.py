@@ -2,7 +2,7 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/licenses/mit-license.php
 
-VERSION_STRING = "bitcoind-ncurses v0.3.0"
+VERSION_STRING = "bitcoind-ncurses v0.3.1"
 
 MODES = ["monitor", "peers", "wallet", "block", "transaction", "console", "net"]
 DEFAULT_MODE = "monitor"

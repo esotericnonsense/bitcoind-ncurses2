@@ -1,4 +1,4 @@
-# bitcoind-ncurses2 v0.3.0
+# bitcoind-ncurses2 v0.3.1
 
 Python ncurses front-end for bitcoind. Uses the JSON-RPC API.
 
@@ -17,6 +17,7 @@ Python ncurses front-end for bitcoind. Uses the JSON-RPC API.
 * Current block information: hash, height, fees, timestamp, age, diff, ...
 * Basic block explorer with fast seeking, no external DB required
 * Basic transaction viewer with fast seeking, best with -txindex=1
+* Ability to query blocks by hash, height; transactions by txid
 * Wallet transaction and balance viewer
 * Charting network monitor
 * Peer/connection information
