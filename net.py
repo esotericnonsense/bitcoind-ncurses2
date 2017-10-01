@@ -39,6 +39,20 @@ class NetView(view.View):
 
                 i += 1
 
+        if not self._nettotals_history or len(deltas) < 1:
+            await self._draw_no_chart()
+        else:
+            await self._draw_chart(deltas)
+
+        self._draw_pad_to_screen()
+
+    async def _draw_no_chart(self):
+        CRED = curses.color_pair(3)
+        CBOLD = curses.A_BOLD
+        self._pad.addstr(0, 1, "no network information yet", CRED + CBOLD)
+        self._pad.addstr(1, 1, "please wait a few seconds...", CRED)
+
+    async def _draw_chart(self, deltas):
         ph, pw = 20, 100
         plot_height = (ph-3) // 2
         plot_offset = plot_height
@@ -84,8 +98,6 @@ class NetView(view.View):
                     height = int(math.ceil((1.0 * plot_height * deltas[i][1]) / max_total))
                     for y in range(0, height):
                         self._pad.addstr(plot_offset+y, i+12, " ", CGREEN + CREVERSE)
-
-        self._draw_pad_to_screen()
 
     async def on_nettotals(self, key, obj):
         try:
