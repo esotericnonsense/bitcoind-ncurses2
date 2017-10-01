@@ -18,6 +18,7 @@ import peers
 import block
 import transaction
 import net
+import wallet
 
 
 async def keypress_loop(window, callback, resize_callback):
@@ -127,15 +128,21 @@ def create_tasks(client, window, nosplash):
     )
 
     netview = net.NetView()
+    walletview = wallet.WalletView(
+        transactionview.set_txid,
+        modehandler.set_mode,
+    )
 
     modehandler.add_callback("monitor", monitorview.on_mode_change)
     modehandler.add_callback("peers", peerview.on_mode_change)
     modehandler.add_callback("block", blockview.on_mode_change)
     modehandler.add_callback("transaction", transactionview.on_mode_change)
     modehandler.add_callback("net", netview.on_mode_change)
+    modehandler.add_callback("wallet", walletview.on_mode_change)
 
     modehandler.add_keypress_handler("block", blockview.handle_keypress)
     modehandler.add_keypress_handler("transaction", transactionview.handle_keypress)
+    modehandler.add_keypress_handler("wallet", walletview.handle_keypress)
 
     async def on_nettotals(key, obj):
         await headerview.on_nettotals(key, obj)
@@ -164,6 +171,7 @@ def create_tasks(client, window, nosplash):
         await blockview.on_window_resize(y, x)
         await transactionview.on_window_resize(y, x)
         await netview.on_window_resize(y, x)
+        await walletview.on_window_resize(y, x)
 
     ty, tx = window.getmaxyx()
     tasks = [
@@ -179,6 +187,8 @@ def create_tasks(client, window, nosplash):
                     on_peerinfo, 5.0),
         poll_client(client, "getmempoolinfo",
                     monitorview.on_mempoolinfo, 5.0),
+        poll_client(client, "listsinceblock",
+                    walletview.on_sinceblock, 5.0),
         poll_client(client, "estimatesmartfee",
                     monitorview.on_estimatesmartfee, 15.0, params=[2]),
         poll_client(client, "estimatesmartfee",

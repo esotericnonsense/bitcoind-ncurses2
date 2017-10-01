@@ -8,7 +8,7 @@ VERSION_STRING = "bitcoind-ncurses v0.2.0-dev"
 #     "monitor", "wallet", "peers", "block",
 #     "tx", "console", "net", "forks",
 # ]
-MODES = ["monitor", "peers", "block", "transaction", "net"]
+MODES = ["monitor", "peers", "wallet", "block", "transaction", "net"]
 DEFAULT_MODE = "monitor"
 
 # TX_VERBOSE_MODE controls whether the prevouts for an input are fetched.
