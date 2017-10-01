@@ -19,8 +19,6 @@ import block
 import transaction
 import net
 
-# from macros import DEFAULT_MODE
-
 
 async def keypress_loop(window, callback, resize_callback):
     async def handle_keypress(key):
