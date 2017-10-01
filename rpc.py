@@ -7,7 +7,10 @@ import async_timeout
 import base64
 import os
 
-import ujson as json
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 import config
 
