@@ -199,7 +199,7 @@ class TransactionView(view.View):
         CRED = curses.color_pair(3)
         CBOLD = curses.A_BOLD
         self._pad.addstr(0, 1, "no transaction loaded", CRED + CBOLD)
-        self._pad.addstr(1, 1, "enter block view and select a transaction", CRED)
+        self._pad.addstr(1, 1, "enter block or wallet view and select a transaction", CRED)
         self._pad.addstr(2, 1, "note that most transactions will be unavailable if -txindex is not enabled on your node", CRED)
 
     async def _draw(self):
