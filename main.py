@@ -17,6 +17,7 @@ import monitor
 import peers
 import block
 import transaction
+import net
 
 # from macros import DEFAULT_MODE
 
@@ -127,13 +128,20 @@ def create_tasks(client, window, nosplash):
         modehandler.set_mode,
     )
 
+    netview = net.NetView()
+
     modehandler.add_callback("monitor", monitorview.on_mode_change)
     modehandler.add_callback("peers", peerview.on_mode_change)
     modehandler.add_callback("block", blockview.on_mode_change)
     modehandler.add_callback("transaction", transactionview.on_mode_change)
+    modehandler.add_callback("net", netview.on_mode_change)
 
     modehandler.add_keypress_handler("block", blockview.handle_keypress)
     modehandler.add_keypress_handler("transaction", transactionview.handle_keypress)
+
+    async def on_nettotals(key, obj):
+        await headerview.on_nettotals(key, obj)
+        await netview.on_nettotals(key, obj)
 
     async def on_bestblockhash(key, obj):
         await monitorview.on_bestblockhash(key, obj)
@@ -157,6 +165,7 @@ def create_tasks(client, window, nosplash):
         await peerview.on_window_resize(y, x)
         await blockview.on_window_resize(y, x)
         await transactionview.on_window_resize(y, x)
+        await netview.on_window_resize(y, x)
 
     ty, tx = window.getmaxyx()
     tasks = [
@@ -167,7 +176,7 @@ def create_tasks(client, window, nosplash):
         poll_client(client, "getnetworkinfo",
                     headerview.on_networkinfo, 5.0),
         poll_client(client, "getnettotals",
-                    headerview.on_nettotals, 5.0),
+                    on_nettotals, 5.0),
         poll_client(client, "getpeerinfo",
                     on_peerinfo, 5.0),
         poll_client(client, "getmempoolinfo",
