@@ -195,6 +195,13 @@ class TransactionView(view.View):
 
             self._pad.addstr(14+i-offset, 1, "{:05d} {} {: 15.8f} BTC".format(i, outstring, out["value"]), outputcolor)
 
+    async def _draw_no_transaction(self):
+        CRED = curses.color_pair(3)
+        CBOLD = curses.A_BOLD
+        self._pad.addstr(0, 1, "no transaction loaded", CRED + CBOLD)
+        self._pad.addstr(1, 1, "enter block view and select a transaction", CRED)
+        self._pad.addstr(2, 1, "note that most transactions will be unavailable if -txindex is not enabled on your node", CRED)
+
     async def _draw(self):
         self._clear_init_pad()
 
@@ -218,6 +225,8 @@ class TransactionView(view.View):
                 await self._draw_inputs(transaction, inouts)
             if "vout" in transaction:
                 await self._draw_outputs(transaction)
+        else:
+            await self._draw_no_transaction()
 
         self._draw_pad_to_screen()
 
