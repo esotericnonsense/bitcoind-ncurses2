@@ -30,6 +30,11 @@ class BlockStore(object):
                 self._blocks[blockhash] = j["result"]
                 return j["result"]
 
+    async def get_blockhash(self, height):
+        # Direct RPC call.
+        j = await self._client.request("getblockhash", [height])
+        return j["result"]
+
     async def get_previousblockhash(self, blockhash):
         with await self._lock:
             try:
@@ -127,6 +132,9 @@ class BlockView(view.View):
         self._txidsetter = txidsetter
         self._modesetter = modesetter
 
+        self._edit_mode = False  # Are we in edit mode?
+        self._edit_buffer = ""
+
         self._hash = None  # currently browsed hash.
         self._selected_tx = None # (index, blockhash)
         self._tx_offset = None # (offset, blockhash)
@@ -145,7 +153,7 @@ class BlockView(view.View):
         CYELLOW = curses.color_pair(5)
         CBOLD = curses.A_BOLD
 
-        self._pad.addstr(0, 59, "[J/K: browse, HOME/END: quicker, L: best]", CYELLOW)
+        self._pad.addstr(0, 46, "[J/K: browse, HOME/END: quicker, L: best, TAB: manual]", CYELLOW)
 
         self._pad.addstr(0, 1, "Time {}".format(
             datetime.datetime.utcfromtimestamp(block["time"]).isoformat(timespec="seconds")
@@ -205,18 +213,71 @@ class BlockView(view.View):
             else:
                 self._pad.addstr(8+i-offset, 36, "{}".format(txid))
 
+    async def _draw_edit_mode(self):
+        CGREEN = curses.color_pair(1)
+        CRED = curses.color_pair(3)
+        CYELLOW = curses.color_pair(5)
+        CBOLD = curses.A_BOLD
+        CREVERSE = curses.A_REVERSE
+
+        oy, ox = (20-6)//2, (100-70)//2
+        self._pad.addstr(oy, ox, " " * 70, CGREEN + CREVERSE)
+        self._pad.addstr(oy+6, ox, " " * 70, CGREEN + CREVERSE)
+        for i in range(5):
+            self._pad.addstr(oy+1+i, ox, " ", CGREEN + CREVERSE)
+            self._pad.addstr(oy+1+i, ox+69, " ", CGREEN + CREVERSE)
+
+        self._pad.addstr(oy+2, ox+2, "enter a block height or hash", CBOLD)
+        self._pad.addstr(oy+2, ox+53, "[ENTER: search]", CYELLOW)
+        self._pad.addstr(oy+4, ox+2, "> {}".format(self._edit_buffer),
+            CRED + CBOLD + CREVERSE if self._edit_mode else 0)
+
+    async def _submit_edit_buffer(self):
+        buf = self._edit_buffer
+        if len(buf) == 0:
+            return
+
+        if len(buf) < 8 and buf.isdigit():
+            blockhash = await self._blockstore.get_blockhash(int(buf))
+
+            self._edit_mode = False
+            self._edit_buffer = ""
+            await self._set_hash(blockhash)
+            await self._draw_if_visible()
+            return
+
+        if len(buf) == 64:
+            try:
+                int(buf, 16)
+            except ValueError:
+                # Note that it's invalid somehow
+                return
+
+            self._edit_mode = False
+            self._edit_buffer = ""
+            await self._set_hash(buf)
+            await self._draw_if_visible()
+            return
+
+        # Note that it's invalid somehow
+        return
+
     async def _draw(self):
         self._clear_init_pad()
 
-        block = None
-        bestblockhash = None
-        if self._hash:
-            block = await self._blockstore.get_block(self._hash)
-            bestblockhash = await self._blockstore.get_bestblockhash()
+        if self._edit_mode:
+            await self._draw_edit_mode()
 
-        if block:
-            await self._draw_block(block, bestblockhash)
-            await self._draw_transactions(block, bestblockhash)
+        else:
+            block = None
+            bestblockhash = None
+            if self._hash:
+                block = await self._blockstore.get_block(self._hash)
+                bestblockhash = await self._blockstore.get_bestblockhash()
+
+            if block:
+                await self._draw_block(block, bestblockhash)
+                await self._draw_transactions(block, bestblockhash)
 
         self._draw_pad_to_screen()
 
@@ -362,38 +423,60 @@ class BlockView(view.View):
         await self._draw_if_visible()
 
     async def handle_keypress(self, key):
-        assert self._visible
-
-        if key.lower() == "j":
-            await self._select_previous_block()
+        if key == "\t" or key == "KEY_TAB":
+            self._edit_mode = not self._edit_mode
+            await self._draw_if_visible()
             return None
 
-        if key.lower() == "k":
-            await self._select_next_block()
-            return None
+        if self._edit_mode:
+            if (len(key) == 1 and ord(key) == 127) or key == "KEY_BACKSPACE":
+                self._edit_buffer = self._edit_buffer[:-1]
+                await self._draw_if_visible()
+                return None
 
-        if key == "KEY_HOME":
-            await self._select_previous_block_n(1000)
-            return None
+            elif key == "KEY_RETURN" or key == "\n":
+                await self._submit_edit_buffer()
+                await self._draw_if_visible()
+                return None
 
-        if key == "KEY_END":
-            await self._select_next_block_n(1000)
-            return None
+            elif len(key) == 1:
+                if len(self._edit_buffer) < 64:
+                    self._edit_buffer += key
 
-        if key == "KEY_UP":
-            await self._select_previous_transaction()
-            return None
+                await self._draw_if_visible()
+                return None
 
-        if key == "KEY_DOWN":
-            await self._select_next_transaction()
-            return None
+        else:
+            if key.lower() == "j":
+                await self._select_previous_block()
+                return None
 
-        if key == "KEY_RETURN" or key == "\n":
-            await self._enter_transaction_view()
-            return None
+            if key.lower() == "k":
+                await self._select_next_block()
+                return None
 
-        if key.lower() == "l":
-            await self._select_best_block()
-            return None
+            if key == "KEY_HOME":
+                await self._select_previous_block_n(1000)
+                return None
+
+            if key == "KEY_END":
+                await self._select_next_block_n(1000)
+                return None
+
+            if key == "KEY_UP":
+                await self._select_previous_transaction()
+                return None
+
+            if key == "KEY_DOWN":
+                await self._select_next_transaction()
+                return None
+
+            if key == "KEY_RETURN" or key == "\n":
+                await self._enter_transaction_view()
+                return None
+
+            if key.lower() == "l":
+                await self._select_best_block()
+                return None
 
         return key
