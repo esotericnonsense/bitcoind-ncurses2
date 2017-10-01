@@ -19,6 +19,7 @@ import block
 import transaction
 import net
 import wallet
+import console
 
 
 async def keypress_loop(window, callback, resize_callback):
@@ -133,16 +134,20 @@ def create_tasks(client, window, nosplash):
         modehandler.set_mode,
     )
 
+    consoleview = console.ConsoleView(client)
+
     modehandler.add_callback("monitor", monitorview.on_mode_change)
     modehandler.add_callback("peers", peerview.on_mode_change)
     modehandler.add_callback("block", blockview.on_mode_change)
     modehandler.add_callback("transaction", transactionview.on_mode_change)
     modehandler.add_callback("net", netview.on_mode_change)
     modehandler.add_callback("wallet", walletview.on_mode_change)
+    modehandler.add_callback("console", consoleview.on_mode_change)
 
     modehandler.add_keypress_handler("block", blockview.handle_keypress)
     modehandler.add_keypress_handler("transaction", transactionview.handle_keypress)
     modehandler.add_keypress_handler("wallet", walletview.handle_keypress)
+    modehandler.add_keypress_handler("console", consoleview.handle_keypress)
 
     async def on_nettotals(key, obj):
         await headerview.on_nettotals(key, obj)
@@ -172,6 +177,7 @@ def create_tasks(client, window, nosplash):
         await transactionview.on_window_resize(y, x)
         await netview.on_window_resize(y, x)
         await walletview.on_window_resize(y, x)
+        await consoleview.on_window_resize(y, x)
 
     ty, tx = window.getmaxyx()
     tasks = [

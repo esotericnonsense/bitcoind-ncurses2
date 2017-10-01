@@ -62,6 +62,22 @@ class ModeHandler(object):
         await self.set_mode(newmode)
 
     async def handle_keypress(self, key):
+        # See if the current mode can handle it.
+        if self._mode is None:
+            return key
+
+        handler = None
+        try:
+            handler = self._keypress_handlers[self._mode]
+        except KeyError:
+            pass
+
+        if handler:
+            key = await handler(key)
+
+        if key is None:
+            return key
+
         # See if it's related to switching modes.
         if key == "KEY_LEFT":
             await self._seek_mode(-1)
@@ -76,16 +92,5 @@ class ModeHandler(object):
                 if mode[0] == key.lower():
                     await self.set_mode(mode)
                     return None
-
-        # See if the current mode can handle it.
-        if self._mode is None:
-            return key
-
-        try:
-            handler = self._keypress_handlers[self._mode]
-        except KeyError:
-            return key
-
-        key = await handler(key)
 
         return key  # Either none by this point, or still there.
