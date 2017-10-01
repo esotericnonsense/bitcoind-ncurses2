@@ -179,8 +179,7 @@ class BlockView(view.View):
 
         self._pad.addstr(6, 36, "Transactions: {}".format(
             len(block["tx"])), CBOLD)
-        self._pad.addstr(6, 68, "[UP/DOWN: browse, ENTER: select]".format(
-            len(block["tx"])), CYELLOW)
+        self._pad.addstr(6, 68, "[UP/DOWN: browse, ENTER: select]", CYELLOW)
 
         if self._selected_tx is None or self._tx_offset is None:
             # Shouldn't happen
