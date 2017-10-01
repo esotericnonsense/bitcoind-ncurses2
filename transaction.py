@@ -6,7 +6,8 @@ import datetime
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE, TX_VERBOSE_MODE
+import view
+from macros import TX_VERBOSE_MODE
 
 
 class TransactionStore(object):
@@ -28,13 +29,11 @@ class TransactionStore(object):
                 return j["result"]
 
 
-class TransactionView(object):
+class TransactionView(view.View):
+    _mode_name = "transaction"
+
     def __init__(self, transactionstore):
         self._transactionstore = transactionstore
-
-        self._pad = None
-
-        self._visible = False
 
         self._txid = None  # currently browsed txid.
         self._selected_input = None # (index, txid)
@@ -42,7 +41,7 @@ class TransactionView(object):
         self._selected_output = None # (index, txid)
         self._output_offset = None # (offset, txid)
 
-        self._window_size = MIN_WINDOW_SIZE
+        super().__init__()
 
     async def _set_txid(self, txid, vout=None):
         # TODO: lock?
@@ -196,13 +195,22 @@ class TransactionView(object):
 
             self._pad.addstr(14+i-offset, 1, "{:05d} {} {: 15.8f} BTC".format(i, outstring, out["value"]), outputcolor)
 
-    async def _draw(self, transaction, inouts):
-        # TODO: figure out window width etc.
+    async def _draw(self):
+        self._clear_init_pad()
 
-        if self._pad is not None:
-            self._pad.clear()
-        else:
-            self._pad = curses.newpad(20, 100)
+        transaction = None
+        inouts = None
+        if self._txid:
+            transaction = await self._transactionstore.get_transaction(self._txid)
+            if TX_VERBOSE_MODE:
+                inouts = []
+                for vin in transaction["vin"]:
+                    if not "txid" in vin:
+                        # It's a coinbase
+                        inouts = None
+                        break
+                    prevtx = await self._transactionstore.get_transaction(vin["txid"])
+                    inouts.append(prevtx["vout"][vin["vout"]])
 
         if transaction:
             await self._draw_transaction(transaction)
@@ -211,14 +219,7 @@ class TransactionView(object):
             if "vout" in transaction:
                 await self._draw_outputs(transaction)
 
-        await self._draw_pad_to_screen()
-
-    async def _draw_pad_to_screen(self):
-        maxy, maxx = self._window_size
-        if maxy < 8 or maxx < 3:
-            return # Can't do it
-
-        self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
+        self._draw_pad_to_screen()
 
     async def _select_previous_input(self):
         if self._txid is None:
@@ -238,7 +239,7 @@ class TransactionView(object):
 
         self._selected_input = (self._selected_input[0] - 1, self._selected_input[1])
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_next_input(self):
         if self._txid is None:
@@ -263,7 +264,7 @@ class TransactionView(object):
 
         self._selected_input = (self._selected_input[0] + 1, self._selected_input[1])
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_input_as_transaction(self):
         if self._txid is None:
@@ -287,7 +288,7 @@ class TransactionView(object):
         else:
             await self._set_txid(inp["txid"], vout=inp["vout"])
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_previous_output(self):
         if self._txid is None:
@@ -307,7 +308,7 @@ class TransactionView(object):
 
         self._selected_output = (self._selected_output[0] - 1, self._selected_output[1])
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_next_output(self):
         if self._txid is None:
@@ -332,41 +333,7 @@ class TransactionView(object):
 
         self._selected_output = (self._selected_output[0] + 1, self._selected_output[1])
 
-        await self.draw()
-
-    async def draw(self):
-        if not self._visible:
-            return
-
-        transaction = None
-        inouts = None
-        if self._txid:
-            transaction = await self._transactionstore.get_transaction(self._txid)
-            if TX_VERBOSE_MODE:
-                inouts = []
-                for vin in transaction["vin"]:
-                    if not "txid" in vin:
-                        # It's a coinbase
-                        inouts = None
-                        break
-                    prevtx = await self._transactionstore.get_transaction(vin["txid"])
-                    inouts.append(prevtx["vout"][vin["vout"]])
-
-        await self._draw(transaction, inouts)
-
-    async def on_mode_change(self, newmode):
-        if newmode != "transaction":
-            self._visible = False
-            return
-
-        self._visible = True
-        await self.draw()
-
-    async def on_window_resize(self, y, x):
-        # At the moment we ignore the x size and limit to 100.
-        self._window_size = (y, x)
-        if self._visible:
-            await self.draw()
+        await self._draw_if_visible()
 
     async def handle_keypress(self, key):
         assert self._visible
@@ -390,7 +357,5 @@ class TransactionView(object):
         if key == "KEY_RETURN" or key == "\n":
             await self._select_input_as_transaction()
             return None
-
-        raise Exception(key)
 
         return key

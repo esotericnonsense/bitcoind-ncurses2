@@ -24,6 +24,7 @@ splash_array = [
 width = len(splash_array[0])
 height = len(splash_array)
 
+# TODO: potentially move SplashView over to view.View
 class SplashView(object):
     def __init__(self, set_mode_callback):
         self._set_mode_callback = set_mode_callback # ModeHandler

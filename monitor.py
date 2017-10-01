@@ -8,16 +8,14 @@ import curses
 import asyncio
 from decimal import Decimal
 
-from macros import MIN_WINDOW_SIZE
+import view
 
 
-class MonitorView(object):
+class MonitorView(view.View):
+    _mode_name = "monitor"
+
     def __init__(self, client):
         self._client = client
-
-        self._pad = None
-
-        self._visible = False
 
         self._lock = asyncio.Lock()
         self._bestblockhash = None
@@ -29,15 +27,10 @@ class MonitorView(object):
         self._dt = None
         self._uptime = None # raw uptime from bitcoind (seconds)
 
-        self._window_size = MIN_WINDOW_SIZE
+        super().__init__()
 
     async def _draw(self):
-        # TODO: figure out window width etc.
-
-        if self._pad is not None:
-            self._pad.clear()
-        else:
-            self._pad = curses.newpad(20, 100)
+        self._clear_init_pad()
 
         if self._bestblockheader:
             bbh = self._bestblockheader
@@ -132,16 +125,10 @@ class MonitorView(object):
         if self._uptime:
             self._pad.addstr(13, 1, "uptime: {}".format(datetime.timedelta(seconds=self._uptime)))
 
-        await self._draw_pad_to_screen()
+        self._draw_pad_to_screen()
 
-    async def _draw_pad_to_screen(self):
-        maxy, maxx = self._window_size
-        if maxy < 8 or maxx < 3:
-            return # Can't do it
-
-        self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
-
-    async def draw(self):
+    async def _draw_if_visible(self):
+        """ Override the view.View method because we need to lock. """
         with await self._lock:
             if self._visible:
                 await self._draw()
@@ -168,7 +155,7 @@ class MonitorView(object):
                 self._bestcoinbase = j["result"]
 
         if draw:
-            await self.draw()
+            await self._draw_if_visible()
 
     async def on_mempoolinfo(self, key, obj):
         try:
@@ -176,7 +163,7 @@ class MonitorView(object):
         except KeyError:
             return
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def on_estimatesmartfee(self, key, obj):
         try:
@@ -190,13 +177,13 @@ class MonitorView(object):
         except KeyError:
             self._estimatesmartfee = None
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def on_tick(self, dt):
         with await self._lock:
             self._dt = dt
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def on_uptime(self, key, obj):
         try:
@@ -204,17 +191,4 @@ class MonitorView(object):
         except KeyError:
             return
 
-        await self.draw()
-
-    async def on_mode_change(self, newmode):
-        if newmode != "monitor":
-            self._visible = False
-            return
-
-        self._visible = True
-        await self.draw()
-
-    async def on_window_resize(self, y, x):
-        # At the moment we ignore the x size and limit to 100.
-        self._window_size = (y, x)
-        await self.draw()
+        await self._draw_if_visible()

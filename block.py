@@ -8,7 +8,7 @@ import curses
 import asyncio
 # from decimal import Decimal
 
-from macros import MIN_WINDOW_SIZE
+import view
 
 
 class BlockStore(object):
@@ -119,22 +119,19 @@ class BlockStore(object):
 
             return self._bestblockhash
 
-class BlockView(object):
+class BlockView(view.View):
+    _mode_name = "block"
+
     def __init__(self, blockstore, txidsetter, modesetter):
         self._blockstore = blockstore
-
         self._txidsetter = txidsetter
         self._modesetter = modesetter
-
-        self._pad = None
-
-        self._visible = False
 
         self._hash = None  # currently browsed hash.
         self._selected_tx = None # (index, blockhash)
         self._tx_offset = None # (offset, blockhash)
 
-        self._window_size = MIN_WINDOW_SIZE
+        super().__init__()
 
     async def _set_hash(self, newhash):
         # TODO: lock?
@@ -209,28 +206,20 @@ class BlockView(object):
             else:
                 self._pad.addstr(8+i-offset, 36, "{}".format(txid))
 
+    async def _draw(self):
+        self._clear_init_pad()
 
-    async def _draw(self, block, bestblockhash):
-        # TODO: figure out window width etc.
-
-        if self._pad is not None:
-            self._pad.clear()
-        else:
-            self._pad = curses.newpad(20, 100)
-
+        block = None
+        bestblockhash = None
+        if self._hash:
+            block = await self._blockstore.get_block(self._hash)
+            bestblockhash = await self._blockstore.get_bestblockhash()
 
         if block:
             await self._draw_block(block, bestblockhash)
             await self._draw_transactions(block, bestblockhash)
 
-        await self._draw_pad_to_screen()
-
-    async def _draw_pad_to_screen(self):
-        maxy, maxx = self._window_size
-        if maxy < 8 or maxx < 3:
-            return # Can't do it
-
-        self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
+        self._draw_pad_to_screen()
 
     async def _select_previous_transaction(self):
         if self._hash is None:
@@ -250,7 +239,7 @@ class BlockView(object):
 
         self._selected_tx = (self._selected_tx[0] - 1, self._selected_tx[1])
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_next_transaction(self):
         if self._hash is None:
@@ -275,7 +264,7 @@ class BlockView(object):
 
         self._selected_tx = (self._selected_tx[0] + 1, self._selected_tx[1])
 
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _enter_transaction_view(self):
         if self._hash is None:
@@ -307,7 +296,7 @@ class BlockView(object):
             return # Can't do anything
 
         await self._set_hash(newhash)
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_next_block(self):
         if self._hash is None:
@@ -319,7 +308,7 @@ class BlockView(object):
             return # Can't do anything
 
         await self._set_hash(newhash)
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_previous_block_n(self, n):
         if self._hash is None:
@@ -331,7 +320,7 @@ class BlockView(object):
             return # Can't do anything
 
         await self._set_hash(newhash)
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_next_block_n(self, n):
         if self._hash is None:
@@ -343,7 +332,7 @@ class BlockView(object):
             return # Can't do anything
 
         await self._set_hash(newhash)
-        await self.draw()
+        await self._draw_if_visible()
 
     async def _select_best_block(self):
         if self._hash is None:
@@ -355,19 +344,7 @@ class BlockView(object):
             return # Can't do anything
 
         await self._set_hash(newhash)
-        await self.draw()
-
-    async def draw(self):
-        if not self._visible:
-            return
-
-        block = None
-        bestblockhash = None
-        if self._hash:
-            block = await self._blockstore.get_block(self._hash)
-            bestblockhash = await self._blockstore.get_bestblockhash()
-
-        await self._draw(block, bestblockhash)
+        await self._draw_if_visible()
 
     async def on_bestblockhash(self, key, obj):
         try:
@@ -383,21 +360,7 @@ class BlockView(object):
             await self._set_hash(newhash)
 
         # Redraw so that we know if it's the best
-        await self.draw()
-
-    async def on_mode_change(self, newmode):
-        if newmode != "block":
-            self._visible = False
-            return
-
-        self._visible = True
-        await self.draw()
-
-    async def on_window_resize(self, y, x):
-        # At the moment we ignore the x size and limit to 100.
-        self._window_size = (y, x)
-        if self._visible:
-            await self.draw()
+        await self._draw_if_visible()
 
     async def handle_keypress(self, key):
         assert self._visible

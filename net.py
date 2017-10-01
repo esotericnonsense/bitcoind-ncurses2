@@ -6,27 +6,40 @@ import math
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE
+import view
 
 
-class NetView(object):
+class NetView(view.View):
+    _mode_name = "net"
+
     def __init__(self):
-        self._pad = None
-
-        self._visible = False
-
         self._nettotals_history = []
 
-        self._window_size = MIN_WINDOW_SIZE
+        super().__init__()
 
-    async def _draw(self, deltas):
+    async def _draw(self):
+        self._clear_init_pad()
+
+        deltas = []
+        if self._nettotals_history:
+            hist = self._nettotals_history
+            i = 1
+            while i < len(hist):
+                prev = hist[i-1]
+                current = hist[i]
+                seconds = (current["timemillis"] - prev["timemillis"]) / 1000
+                if seconds <= 0:
+                    continue
+                up = current["totalbytessent"] - prev["totalbytessent"]
+                down = current["totalbytesrecv"] - prev["totalbytesrecv"]
+
+                deltas.append(
+                    (up/seconds, down/seconds),
+                )
+
+                i += 1
+
         ph, pw = 20, 100
-
-        if self._pad is not None:
-            self._pad.clear()
-        else:
-            self._pad = curses.newpad(ph, pw)
-
         plot_height = (ph-3) // 2
         plot_offset = plot_height
         chart_offset = 13
@@ -74,36 +87,6 @@ class NetView(object):
 
         self._draw_pad_to_screen()
 
-    def _draw_pad_to_screen(self):
-        maxy, maxx = self._window_size
-        if maxy < 8 or maxx < 3:
-            return # Can't do it
-
-        self._pad.refresh(0, 0, 4, 0, min(maxy-3, maxy-2), min(maxx-1, 100))
-
-    async def draw(self):
-        if self._visible:
-            deltas = []
-            if self._nettotals_history:
-                hist = self._nettotals_history
-                i = 1
-                while i < len(hist):
-                    prev = hist[i-1]
-                    current = hist[i]
-                    seconds = (current["timemillis"] - prev["timemillis"]) / 1000
-                    if seconds <= 0:
-                        continue
-                    up = current["totalbytessent"] - prev["totalbytessent"]
-                    down = current["totalbytesrecv"] - prev["totalbytesrecv"]
-
-                    deltas.append(
-                        (up/seconds, down/seconds),
-                    )
-
-                    i += 1
-
-            await self._draw(deltas)
-
     async def on_nettotals(self, key, obj):
         try:
             self._nettotals_history.append(obj["result"])
@@ -114,17 +97,4 @@ class NetView(object):
         if len(self._nettotals_history) > 500:
             self._nettotals_history = self._nettotals_history[:300]
 
-        await self.draw()
-
-    async def on_mode_change(self, newmode):
-        if newmode != "net":
-            self._visible = False
-            return
-
-        self._visible = True
-        await self.draw()
-
-    async def on_window_resize(self, y, x):
-        # At the moment we ignore the x size and limit to 100.
-        self._window_size = (y, x)
-        await self.draw()
+        await self._draw_if_visible()

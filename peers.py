@@ -8,23 +8,19 @@ import math
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE
+import view
 
-class PeersView(object):
+
+class PeersView(view.View):
+    _mode_name = "peers"
+
     def __init__(self):
-        self._pad = None
-        self._visible = False
         self._peerinfo = None  # raw data from getpeerinfo
 
-        self._window_size = MIN_WINDOW_SIZE
+        super().__init__()
 
     async def _draw(self):
-        # TODO: figure out window width etc.
-
-        if self._pad is not None:
-            self._pad.clear()
-        else:
-            self._pad = curses.newpad(20, 100) # y, x
+        self._clear_init_pad()
 
         if self._peerinfo:
             po = self._peerinfo
@@ -88,18 +84,7 @@ class PeersView(object):
                         if 'synced_headers' in peer:
                           self._pad.addstr(1+index-offset, 93, str(peer['synced_headers']).rjust(7)    )
 
-        await self._draw_pad_to_screen()
-
-    async def draw(self):
-        if self._visible:
-            await self._draw()
-
-    async def _draw_pad_to_screen(self):
-        maxy, maxx = self._window_size
-        if maxy < 8 or maxx < 3:
-            return # Can't do it
-
-        self._pad.refresh(0, 0, 4, 0, min(maxy-3, 24), min(maxx-1, 100))
+        self._draw_pad_to_screen()
 
     async def on_peerinfo(self, key, obj):
         try:
@@ -107,17 +92,4 @@ class PeersView(object):
         except KeyError:
             return
 
-        await self.draw()
-
-    async def on_mode_change(self, newmode):
-        if newmode != "peers":
-            self._visible = False
-            return
-
-        self._visible = True
-        await self.draw()
-
-    async def on_window_resize(self, y, x):
-        # At the moment we ignore the x size and limit to 100.
-        self._window_size = (y, x)
-        await self.draw()
+        await self._draw_if_visible()
