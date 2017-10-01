@@ -196,12 +196,12 @@ class BlockView(object):
         offset = self._tx_offset[0]
         if offset > 0:
             self._pad.addstr(7, 36, "... ^ ...", CBOLD)
-        if offset < len(block["tx"]) - 9:
-            self._pad.addstr(17, 36, "... v ...", CBOLD)
+        if offset < len(block["tx"]) - 11:
+            self._pad.addstr(19, 36, "... v ...", CBOLD)
         for i, txid in enumerate(block["tx"]):
             if i < offset: # this is lazy
                 continue
-            if i > offset+8: # this is lazy
+            if i > offset+10: # this is lazy
                 break
 
             if i == self._selected_tx[0] and self._hash == self._selected_tx[1]:
@@ -270,7 +270,7 @@ class BlockView(object):
         if self._selected_tx[0] == len(block["tx"]) - 1:
             return # At the end already
 
-        if self._selected_tx[0] == self._tx_offset[0] + 8:
+        if self._selected_tx[0] == self._tx_offset[0] + 10:
             self._tx_offset = (self._tx_offset[0] + 1, self._tx_offset[1])
 
         self._selected_tx = (self._selected_tx[0] + 1, self._selected_tx[1])
