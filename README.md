@@ -54,6 +54,14 @@ python3 main.py --datadir /some/path/to/your/datadir
 This is an early development release and a complete rewrite of the original
 bitcoind-ncurses. Expect the unexpected.
 
+Feedback
+--------
+
+Please report any problems using the Github issue tracker. Pull requests are
+also welcomed.
+The author, esotericnonsense, can often be found milling around on #bitcoin
+(Freenode).
+
 Donations
 ---------
 
