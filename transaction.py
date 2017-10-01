@@ -35,6 +35,9 @@ class TransactionView(view.View):
     def __init__(self, transactionstore):
         self._transactionstore = transactionstore
 
+        self._edit_mode = False  # Are we in edit mode?
+        self._edit_buffer = ""
+
         self._txid = None  # currently browsed txid.
         self._selected_input = None # (index, txid)
         self._input_offset = None # (offset, txid)
@@ -202,31 +205,75 @@ class TransactionView(view.View):
         self._pad.addstr(1, 1, "enter block or wallet view and select a transaction", CRED)
         self._pad.addstr(2, 1, "note that most transactions will be unavailable if -txindex is not enabled on your node", CRED)
 
+    async def _draw_edit_mode(self):
+        CGREEN = curses.color_pair(1)
+        CRED = curses.color_pair(3)
+        CYELLOW = curses.color_pair(5)
+        CBOLD = curses.A_BOLD
+        CREVERSE = curses.A_REVERSE
+
+        oy, ox = (20-6)//2, (100-70)//2
+        self._pad.addstr(oy, ox, " " * 70, CGREEN + CREVERSE)
+        self._pad.addstr(oy+6, ox, " " * 70, CGREEN + CREVERSE)
+        for i in range(5):
+            self._pad.addstr(oy+1+i, ox, " ", CGREEN + CREVERSE)
+            self._pad.addstr(oy+1+i, ox+69, " ", CGREEN + CREVERSE)
+
+        self._pad.addstr(oy+2, ox+2, "enter a transaction id (txid)", CBOLD)
+        self._pad.addstr(oy+2, ox+53, "[ENTER: search]", CYELLOW)
+        self._pad.addstr(oy+4, ox+2, "> {}".format(self._edit_buffer),
+            CRED + CBOLD + CREVERSE if self._edit_mode else 0)
+
+    async def _submit_edit_buffer(self):
+        buf = self._edit_buffer
+        if len(buf) == 0:
+            return
+
+        if len(buf) == 64:
+            try:
+                int(buf, 16)
+            except ValueError:
+                # Note that it's invalid somehow
+                return
+
+            self._edit_mode = False
+            self._edit_buffer = ""
+            await self._set_txid(buf)
+            await self._draw_if_visible()
+            return
+
+        # Note that it's invalid somehow
+        return
+
     async def _draw(self):
         self._clear_init_pad()
 
-        transaction = None
-        inouts = None
-        if self._txid:
-            transaction = await self._transactionstore.get_transaction(self._txid)
-            if TX_VERBOSE_MODE:
-                inouts = []
-                for vin in transaction["vin"]:
-                    if not "txid" in vin:
-                        # It's a coinbase
-                        inouts = None
-                        break
-                    prevtx = await self._transactionstore.get_transaction(vin["txid"])
-                    inouts.append(prevtx["vout"][vin["vout"]])
+        if self._edit_mode:
+            await self._draw_edit_mode()
 
-        if transaction:
-            await self._draw_transaction(transaction)
-            if "vin" in transaction:
-                await self._draw_inputs(transaction, inouts)
-            if "vout" in transaction:
-                await self._draw_outputs(transaction)
         else:
-            await self._draw_no_transaction()
+            transaction = None
+            inouts = None
+            if self._txid:
+                transaction = await self._transactionstore.get_transaction(self._txid)
+                if TX_VERBOSE_MODE:
+                    inouts = []
+                    for vin in transaction["vin"]:
+                        if not "txid" in vin:
+                            # It's a coinbase
+                            inouts = None
+                            break
+                        prevtx = await self._transactionstore.get_transaction(vin["txid"])
+                        inouts.append(prevtx["vout"][vin["vout"]])
+
+            if transaction:
+                await self._draw_transaction(transaction)
+                if "vin" in transaction:
+                    await self._draw_inputs(transaction, inouts)
+                if "vout" in transaction:
+                    await self._draw_outputs(transaction)
+            else:
+                await self._draw_no_transaction()
 
         self._draw_pad_to_screen()
 
@@ -345,26 +392,47 @@ class TransactionView(view.View):
         await self._draw_if_visible()
 
     async def handle_keypress(self, key):
-        assert self._visible
-
-        if key == "KEY_UP":
-            await self._select_previous_input()
+        if key == "\t" or key == "KEY_TAB":
+            self._edit_mode = not self._edit_mode
+            await self._draw_if_visible()
             return None
 
-        if key == "KEY_DOWN":
-            await self._select_next_input()
-            return None
+        if self._edit_mode:
+            if (len(key) == 1 and ord(key) == 127) or key == "KEY_BACKSPACE":
+                self._edit_buffer = self._edit_buffer[:-1]
+                await self._draw_if_visible()
+                return None
 
-        if key.lower() == "j" or key == "KEY_PPAGE":
-            await self._select_previous_output()
-            return None
+            elif key == "KEY_RETURN" or key == "\n":
+                await self._submit_edit_buffer()
+                await self._draw_if_visible()
+                return None
 
-        if key.lower() == "k" or key == "KEY_NPAGE":
-            await self._select_next_output()
-            return None
+            elif len(key) == 1:
+                if len(self._edit_buffer) < 64:
+                    self._edit_buffer += key
 
-        if key == "KEY_RETURN" or key == "\n":
-            await self._select_input_as_transaction()
-            return None
+                await self._draw_if_visible()
+                return None
+        else:
+            if key == "KEY_UP":
+                await self._select_previous_input()
+                return None
+
+            if key == "KEY_DOWN":
+                await self._select_next_input()
+                return None
+
+            if key.lower() == "j" or key == "KEY_PPAGE":
+                await self._select_previous_output()
+                return None
+
+            if key.lower() == "k" or key == "KEY_NPAGE":
+                await self._select_next_output()
+                return None
+
+            if key == "KEY_RETURN" or key == "\n":
+                await self._select_input_as_transaction()
+                return None
 
         return key
