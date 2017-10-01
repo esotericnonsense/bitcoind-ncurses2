@@ -17,9 +17,12 @@ Python ncurses front-end for bitcoind. Uses the JSON-RPC API.
 
 * Updating monitor mode showing bitcoind's status, including:
 * Current block information: hash, height, fees, timestamp, age, diff, ...
-* Wallet balance
-* Total bandwidth used (up / down)
-* Connected peers, IP addresses, user agents, ...
+* Basic block explorer with fast seeking, no external DB required
+* Basic transaction viewer with fast seeking, best with -txindex=1
+* Wallet transaction and balance viewer
+* Charting network monitor
+* Peer/connection information
+* Basic debug console functionality
 
 ## Installation and usage
 
