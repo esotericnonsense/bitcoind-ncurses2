@@ -80,6 +80,10 @@ class WalletView(view.View):
         except KeyError:
             return
 
+        if wallet is None:
+            # probably a disabled wallet.
+            return
+
         if self._wallet is not None:
             if wallet["lastblock"] == self._wallet["lastblock"]:
                 # No change.
