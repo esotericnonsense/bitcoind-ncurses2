@@ -30,6 +30,11 @@ class PeersView(view.View):
             window_height = 20
             offset = 0
             for index in range(offset, offset+window_height):
+                # TODO: replace this hack with real scrolling.
+                if index > 15 and index < len(po):
+                    self._pad.addstr(1+index-offset, 1, "<some peers were omitted>")
+                    break
+
                 if index < len(po):
                     peer = po[index]
 
