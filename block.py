@@ -10,6 +10,7 @@ import asyncio
 
 import view
 from util import isoformatseconds
+from rpc import RPCError
 
 
 class BlockStore(object):

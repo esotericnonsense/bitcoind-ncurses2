@@ -81,6 +81,11 @@ def get_auth_from_datadir(datadir):
         return craft_auth_from_credentials(rpcuser, rpcpassword)
 
 
+class RPCError(BaseException):
+    # TODO: include the error code, etc.
+    pass
+
+
 class BitcoinRPCClient(object):
     def __init__(self, url, auth):
         self._url = url
@@ -109,8 +114,32 @@ class BitcoinRPCClient(object):
             async with session.post(self._url, headers=self._headers, data=req) as response:
                 return await response.text()
 
+    @staticmethod
+    async def _json_loads(j):
+        return json.loads(j)
+
     async def request(self, method, params=None, ident=None, callback=None):
         async with aiohttp.ClientSession() as session:
             req = await self._craft_request(method, params, ident)
-            html = await self._fetch(session, req)
-            return json.loads(html)
+            j = await self._fetch(session, req)
+            d = await self._json_loads(j)
+
+            try:
+                error = d["error"]
+            except KeyError:
+                raise RPCError("RPC response seems malformed (no error field)")
+
+            if error is not None:
+                # TODO: pass the error up the stack; tweak RPCError
+                raise RPCError("RPC response returned error {}".format(error))
+
+            try:
+                result = d["result"]
+            except KeyError:
+                raise RPCError("RPC response seems malformed (no result field)")
+
+            if result is None:
+                # Is there a case in which a query can return None?
+                raise RPCError("RPC response returned a null result")
+
+            return d

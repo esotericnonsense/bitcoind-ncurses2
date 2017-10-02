@@ -54,8 +54,13 @@ async def poll_client(client, method, callback, sleeptime, params=None):
     await asyncio.sleep(0.1)
 
     while True:
-        j = await client.request(method, params=params)
-        await callback(method, j)
+        try:
+            d = await client.request(method, params=params)
+        except rpc.RPCError:
+            await asyncio.sleep(sleeptime)
+            continue
+
+        await callback(method, d)
         await asyncio.sleep(sleeptime)
 
 
@@ -89,17 +94,28 @@ def initialize():
     return client, args.nosplash
 
 
-def check_disablewallet(client):
+def wallet_enabled(client):
     """ Check if the wallet is enabled. """
 
-    # Ugly, a synchronous RPC request mechanism would be nice here.
-    x = asyncio.gather(client.request("getwalletinfo"))
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(x)
+    async def check_getwalletinfo(client):
+        try:
+            await client.request("getwalletinfo")
+        except rpc.RPCError:
+            return False
 
-    try:
-        x.result()[0]["result"]["walletname"]
-    except (KeyError, TypeError):
+        try:
+            x.result()[0]["result"]["walletname"]
+        except (KeyError, TypeError):
+            return False
+
+        return True
+
+    # Ugly, a synchronous RPC request mechanism would be nice here.
+    check = asyncio.gather(check_getwalletinfo(client))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(check)
+
+    if check.result():
         return True
 
     return False
@@ -210,7 +226,7 @@ def create_tasks(client, window, nosplash):
         splashview.draw(nosplash),
     ]
 
-    if not check_disablewallet(client):
+    if wallet_enabled(client):
         tasks.append(
             poll_client(client, "getwalletinfo", headerview.on_walletinfo, 1.0)
         )
