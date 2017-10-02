@@ -100,13 +100,13 @@ def wallet_enabled(client):
 
     async def check_getwalletinfo(client):
         try:
-            await client.request("getwalletinfo")
+            d = await client.request("getwalletinfo")
         except (rpc.RPCContentError, rpc.RPCTimeoutError):
             # TODO: try again on timeout?
             return False
 
         try:
-            x.result()[0]["result"]["walletname"]
+            d["result"]["walletname"]
         except (KeyError, TypeError):
             return False
 
