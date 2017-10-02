@@ -81,19 +81,21 @@ def get_auth_from_datadir(datadir):
 
         return craft_auth_from_credentials(rpcuser, rpcpassword)
 
-
 class RPCError(BaseException):
+    """ Parent class for the RPC errors. """
+    pass
+
+class RPCContentError(RPCError):
     # TODO: include the error code, etc.
     pass
 
 
-class RPCTimeout(BaseException):
-    # TODO: include the error code, etc.
+class RPCTimeoutError(RPCError):
+    # TODO: include the timeout value?
     pass
 
 
-class RPCConnectionError(BaseException):
-    # TODO: include the error code, etc.
+class RPCConnectionError(RPCError):
     pass
 
 
@@ -126,7 +128,7 @@ class BitcoinRPCClient(object):
                 async with session.post(self._url, headers=self._headers, data=req) as response:
                     return await response.text()
         except asyncio.TimeoutError:
-            raise RPCTimeout
+            raise RPCTimeoutError
         except aiohttp.client_exceptions.ClientOSError:
             raise RPCConnectionError
 
@@ -143,19 +145,19 @@ class BitcoinRPCClient(object):
             try:
                 error = d["error"]
             except KeyError:
-                raise RPCError("RPC response seems malformed (no error field)")
+                raise RPCContentError("RPC response seems malformed (no error field)")
 
             if error is not None:
                 # TODO: pass the error up the stack; tweak RPCError
-                raise RPCError("RPC response returned error {}".format(error))
+                raise RPCContentError("RPC response returned error {}".format(error))
 
             try:
                 result = d["result"]
             except KeyError:
-                raise RPCError("RPC response seems malformed (no result field)")
+                raise RPCContentError("RPC response seems malformed (no result field)")
 
             if result is None:
                 # Is there a case in which a query can return None?
-                raise RPCError("RPC response returned a null result")
+                raise RPCContentError("RPC response returned a null result")
 
             return d

@@ -56,7 +56,7 @@ async def poll_client(client, method, callback, sleeptime, params=None):
     while True:
         try:
             d = await client.request(method, params=params)
-        except (rpc.RPCError, rpc.RPCTimeout):
+        except (rpc.RPCContentError, rpc.RPCTimeoutError):
             # TODO: back off?
             await asyncio.sleep(sleeptime)
             continue
@@ -101,7 +101,8 @@ def wallet_enabled(client):
     async def check_getwalletinfo(client):
         try:
             await client.request("getwalletinfo")
-        except (rpc.RPCError, rpc.RPCTimeout):
+        except (rpc.RPCContentError, rpc.RPCTimeoutError):
+            # TODO: try again on timeout?
             return False
 
         try:
