@@ -30,7 +30,7 @@ git clone https://github.com/esotericnonsense/bitcoind-ncurses2
 ```
 
 ```
-pip install -r bitcoind-ncurses2/requirements.txt
+pip3 install -r bitcoind-ncurses2/requirements.txt
 ```
 or, on Arch Linux:
 ```
