@@ -13,6 +13,7 @@ except ImportError:
     import json
 
 import view
+from rpc import RPCError
 
 
 class ConsoleView(view.View):
@@ -113,7 +114,11 @@ class ConsoleView(view.View):
         else:
             params = None
 
-        response = await self._client.request(cmd, params=params)
+        try:
+            response = await self._client.request(cmd, params=params)
+        except RPCError as e:
+            response = str(e)
+
         self._response_history.append(
             (request, response),
         )
