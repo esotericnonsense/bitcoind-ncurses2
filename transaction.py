@@ -8,6 +8,7 @@ import asyncio
 
 import view
 from macros import TX_VERBOSE_MODE
+from util import isoformatseconds
 
 
 class TransactionStore(object):
@@ -69,7 +70,7 @@ class TransactionView(view.View):
         CBOLD = curses.A_BOLD
 
         self._pad.addstr(0, 1, "time {}".format(
-            datetime.datetime.utcfromtimestamp(transaction["time"]).isoformat(timespec="seconds")
+            isoformatseconds(datetime.datetime.utcfromtimestamp(transaction["time"]))
         ), CBOLD)
         self._pad.addstr(1, 1, "size {}b".format(transaction["size"]), CBOLD)
         self._pad.addstr(1, 15, "vsize {}b".format(transaction["vsize"]), CBOLD)

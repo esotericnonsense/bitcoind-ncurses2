@@ -7,6 +7,7 @@ import curses
 import asyncio
 
 import view
+from util import isoformatseconds
 
 class WalletView(view.View):
     _mode_name = "wallet"
@@ -56,7 +57,7 @@ class WalletView(view.View):
                     self._pad.addstr(2+((i-offset)*3)+1, 1, " " * 98, color)
 
                 self._pad.addstr(2+((i-offset)*3), 1, "{}".format(
-                    datetime.datetime.utcfromtimestamp(tx["timereceived"]).isoformat(timespec="seconds")
+                    isoformatseconds(datetime.datetime.utcfromtimestamp(tx["timereceived"]))
                 ), color)
                 self._pad.addstr(2+((i-offset)*3), 30, "block: {: 7d}".format(tx["blockindex"]), color)
                 self._pad.addstr(2+((i-offset)*3), 81, "{: 15.8f} BTC".format(

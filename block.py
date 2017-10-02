@@ -9,6 +9,7 @@ import asyncio
 # from decimal import Decimal
 
 import view
+from util import isoformatseconds
 
 
 class BlockStore(object):
@@ -156,7 +157,7 @@ class BlockView(view.View):
         self._pad.addstr(0, 46, "[J/K: browse, HOME/END: quicker, L: best, TAB: manual]", CYELLOW)
 
         self._pad.addstr(0, 1, "Time {}".format(
-            datetime.datetime.utcfromtimestamp(block["time"]).isoformat(timespec="seconds")
+            isoformatseconds(datetime.datetime.utcfromtimestamp(block["time"]))
         ), CBOLD)
         self._pad.addstr(0, 31, "Height {}".format(block["height"]), CBOLD)
 

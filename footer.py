@@ -5,6 +5,7 @@
 import curses
 
 from macros import MODES, MIN_WINDOW_SIZE
+from util import isoformatseconds
 
 
 class FooterView(object):
@@ -41,7 +42,7 @@ class FooterView(object):
             x += len(mode_string) + 5
 
         if self._dt:
-            self._pad.addstr(0, 81, self._dt.isoformat(timespec="seconds")[:19], CYELLOW + CBOLD)
+            self._pad.addstr(0, 81, isoformatseconds(self._dt)[:19], CYELLOW + CBOLD)
 
         await self._draw_pad_to_screen()
 
