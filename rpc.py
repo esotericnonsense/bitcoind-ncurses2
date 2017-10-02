@@ -3,6 +3,7 @@
 # file COPYING or https://opensource.org/licenses/mit-license.php
 
 import aiohttp
+import asyncio
 import async_timeout
 import base64
 import os
@@ -86,6 +87,16 @@ class RPCError(BaseException):
     pass
 
 
+class RPCTimeout(BaseException):
+    # TODO: include the error code, etc.
+    pass
+
+
+class RPCConnectionError(BaseException):
+    # TODO: include the error code, etc.
+    pass
+
+
 class BitcoinRPCClient(object):
     def __init__(self, url, auth):
         self._url = url
@@ -110,9 +121,14 @@ class BitcoinRPCClient(object):
         return json.dumps(d)
 
     async def _fetch(self, session, req):
-        with async_timeout.timeout(5):
-            async with session.post(self._url, headers=self._headers, data=req) as response:
-                return await response.text()
+        try:
+            with async_timeout.timeout(5):
+                async with session.post(self._url, headers=self._headers, data=req) as response:
+                    return await response.text()
+        except asyncio.TimeoutError:
+            raise RPCTimeout
+        except aiohttp.client_exceptions.ClientOSError:
+            raise RPCConnectionError
 
     @staticmethod
     async def _json_loads(j):
