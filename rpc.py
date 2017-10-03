@@ -29,7 +29,7 @@ def get_url_from_datadir(datadir):
         return craft_url("http", "localhost", 8332)
 
     proto = cfg["protocol"] if "protocol" in cfg else "http"
-    ip = cfg["rpcip"] if "rpcip" in cfg else "localhost"
+    ip = cfg["rpcconnect"] if "rpcconnect" in cfg else "localhost"
     try:
         port = cfg["rpcport"]
     except KeyError:
