@@ -7,19 +7,19 @@ import os
 import asyncio
 import datetime
 
-import rpc
-import interface
-import modes
-import splash
-import header
-import footer
-import monitor
-import peers
-import block
-import transaction
-import net
-import wallet
-import console
+from . import rpc
+from . import interface
+from . import modes
+from . import splash
+from . import header
+from . import footer
+from . import monitor
+from . import peers
+from . import block
+from . import transaction
+from . import net
+from . import wallet
+from . import console
 
 
 async def keypress_loop(window, callback, resize_callback):

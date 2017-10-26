@@ -5,7 +5,7 @@
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE, DEFAULT_MODE
+from .macros import MIN_WINDOW_SIZE, DEFAULT_MODE
 
 import time
 

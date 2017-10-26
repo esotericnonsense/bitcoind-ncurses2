@@ -4,8 +4,8 @@
 
 import curses
 
-from macros import MODES, MIN_WINDOW_SIZE
-from util import isoformatseconds
+from .macros import MODES, MIN_WINDOW_SIZE
+from .util import isoformatseconds
 
 
 class FooterView(object):

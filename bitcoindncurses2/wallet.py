@@ -6,8 +6,8 @@ import datetime
 import curses
 import asyncio
 
-import view
-from util import isoformatseconds
+from . import view
+from .util import isoformatseconds
 
 class WalletView(view.View):
     _mode_name = "wallet"

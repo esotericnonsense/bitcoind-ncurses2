@@ -6,9 +6,9 @@ import datetime
 import curses
 import asyncio
 
-import view
-from macros import TX_VERBOSE_MODE
-from util import isoformatseconds
+from . import view
+from .macros import TX_VERBOSE_MODE
+from .util import isoformatseconds
 
 
 class TransactionStore(object):

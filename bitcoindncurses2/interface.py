@@ -4,7 +4,7 @@
 
 import curses
 
-from macros import MIN_WINDOW_SIZE
+from .macros import MIN_WINDOW_SIZE
 
 
 def init_curses():
