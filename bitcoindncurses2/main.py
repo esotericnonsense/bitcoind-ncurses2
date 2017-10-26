@@ -22,6 +22,10 @@ from . import wallet
 from . import console
 
 
+class EndLoop(Exception):
+    pass
+
+
 async def keypress_loop(window, callback, resize_callback):
     async def handle_keypress(key):
         if key == "KEY_RESIZE":
@@ -30,7 +34,7 @@ async def keypress_loop(window, callback, resize_callback):
             return
 
         if len(key) == 1 and key.lower() == "q":
-            raise Exception("Quitting.")
+            raise EndLoop("Quitting.")
 
         key = await callback(key)
         if key is not None:
@@ -248,7 +252,8 @@ def mainfn():
         loop = asyncio.get_event_loop()
         t = asyncio.gather(*tasks)
         loop.run_until_complete(t)
-
+    except EndLoop:
+        pass
     finally:
         try:
             loop.close()
