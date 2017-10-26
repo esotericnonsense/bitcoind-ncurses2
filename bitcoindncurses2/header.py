@@ -5,7 +5,7 @@
 import curses
 import platform
 
-from macros import VERSION_STRING, MIN_WINDOW_SIZE
+from .macros import VERSION_STRING, MIN_WINDOW_SIZE
 
 
 class HeaderView(object):

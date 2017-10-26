@@ -7,19 +7,23 @@ import os
 import asyncio
 import datetime
 
-import rpc
-import interface
-import modes
-import splash
-import header
-import footer
-import monitor
-import peers
-import block
-import transaction
-import net
-import wallet
-import console
+from . import rpc
+from . import interface
+from . import modes
+from . import splash
+from . import header
+from . import footer
+from . import monitor
+from . import peers
+from . import block
+from . import transaction
+from . import net
+from . import wallet
+from . import console
+
+
+class EndLoop(Exception):
+    pass
 
 
 async def keypress_loop(window, callback, resize_callback):
@@ -30,7 +34,7 @@ async def keypress_loop(window, callback, resize_callback):
             return
 
         if len(key) == 1 and key.lower() == "q":
-            raise Exception("Quitting.")
+            raise EndLoop("Quitting.")
 
         key = await callback(key)
         if key is not None:
@@ -248,7 +252,8 @@ def mainfn():
         loop = asyncio.get_event_loop()
         t = asyncio.gather(*tasks)
         loop.run_until_complete(t)
-
+    except EndLoop:
+        pass
     finally:
         try:
             loop.close()
