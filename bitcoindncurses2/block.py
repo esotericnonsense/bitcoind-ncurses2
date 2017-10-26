@@ -8,8 +8,8 @@ import curses
 import asyncio
 # from decimal import Decimal
 
-import view
-from util import isoformatseconds
+from .import view
+from .util import isoformatseconds
 
 
 class BlockStore(object):

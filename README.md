@@ -25,29 +25,54 @@ Python ncurses front-end for bitcoind. Uses the JSON-RPC API.
 
 ## Installation and usage
 
-```
-git clone https://github.com/esotericnonsense/bitcoind-ncurses2
-```
-
-```
-pip3 install -r bitcoind-ncurses2/requirements.txt
-```
-or, on Arch Linux:
-```
-pacman -S python-aiohttp python-async-timeout
+Clone the repository:
+```bash
+$ git clone https://github.com/esotericnonsense/bitcoind-ncurses2
+$ cd bitcoind-ncurses2
 ```
 
+Optionally, create a virtualenv:
+```bash
+# Create a regular virtualenv.
+$ virtualenv-3 env
+
+# Alternative to the above, using virtualenvwrapper.
+$ mkvirtualenv -p python3 env
+
+# Enter the virtualenv.
+$ . env/bin/activate
 ```
-cd bitcoind-ncurses2
-python3 main.py
+
+Install the dependencies with pip:
+```bash
+$ pip3 install -r requirements.txt
+```
+
+Or, on Arch Linux (if you're not using a virtualenv):
+```bash
+$ pacman -S python-aiohttp python-async-timeout
+```
+
+Install from the `setup.py` file:
+```bash
+# For regular users.
+python setup.py install
+
+# Use this instead if you want to develop bitcoind-ncurses
+python setup.py develop
+```
+
+Run the program:
+```bash
+$ bitcoind-ncurses2
 ```
 
 bitcoind-ncurses2 will automatically use the cookie file available in
 ~/.bitcoin/, or the RPC settings in ~/.bitcoin/bitcoin.conf. To use a different
 datadir, specify the --datadir flag:
 
-```
-python3 main.py --datadir /some/path/to/your/datadir
+```bash
+$ bitcoind-ncurses2 --datadir /some/path/to/your/datadir
 ```
 
 This is an early development release and a complete rewrite of the original

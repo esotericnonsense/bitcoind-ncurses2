@@ -12,8 +12,8 @@ try:
 except ImportError:
     import json
 
-import view
-from rpc import RPCError
+from . import view
+from .rpc import RPCError
 
 
 class ConsoleView(view.View):

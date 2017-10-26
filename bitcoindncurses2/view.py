@@ -5,7 +5,7 @@
 import curses
 import asyncio
 
-from macros import MIN_WINDOW_SIZE
+from .macros import MIN_WINDOW_SIZE
 
 
 class View(object):

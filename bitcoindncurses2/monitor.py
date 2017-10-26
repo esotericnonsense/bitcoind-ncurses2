@@ -8,8 +8,8 @@ import curses
 import asyncio
 from decimal import Decimal
 
-import view
-from rpc import RPCError
+from . import view
+from .rpc import RPCError
 
 
 class MonitorView(view.View):

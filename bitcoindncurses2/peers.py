@@ -8,7 +8,7 @@ import math
 import curses
 import asyncio
 
-import view
+from . import view
 
 
 class PeersView(view.View):

@@ -13,7 +13,7 @@ try:
 except ImportError:
     import json
 
-import config
+from . import config
 
 
 def craft_url(proto, ip, port):
