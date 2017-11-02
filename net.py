@@ -68,8 +68,8 @@ class NetView(view.View):
             if len(deltas) > chart_width:
                 deltas = deltas[-chart_width:]
 
-            up_str = "Up: {: 9.2f}kB/s".format(deltas[-1][1]/1024).rjust(10)
-            down_str = "Down: {: 9.2f}kB/s".format(deltas[-1][0]/1024).rjust(10)
+            up_str = "Up: {: 9.2f}kB/s".format(deltas[-1][0]/1024).rjust(10)
+            down_str = "Down: {: 9.2f}kB/s".format(deltas[-1][1]/1024).rjust(10)
             total_str = "Total: {: 9.2f}kB/s".format((deltas[-1][0] + deltas[-1][1])/1024).rjust(10)
             self._pad.addstr(ph-2, pw-62, up_str, CBOLD + CCYAN)
             self._pad.addstr(ph-2, pw-42, down_str, CBOLD + CGREEN)
