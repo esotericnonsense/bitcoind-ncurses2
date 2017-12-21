@@ -68,8 +68,8 @@ class NetView(view.View):
             if len(deltas) > chart_width:
                 deltas = deltas[-chart_width:]
 
-            up_str = "Up: {: 9.2f}kB/s".format(deltas[-1][1]/1024).rjust(10)
-            down_str = "Down: {: 9.2f}kB/s".format(deltas[-1][0]/1024).rjust(10)
+            up_str = "Up: {: 9.2f}kB/s".format(deltas[-1][0]/1024).rjust(10)
+            down_str = "Down: {: 9.2f}kB/s".format(deltas[-1][1]/1024).rjust(10)
             total_str = "Total: {: 9.2f}kB/s".format((deltas[-1][0] + deltas[-1][1])/1024).rjust(10)
             self._pad.addstr(ph-2, pw-62, up_str, CBOLD + CCYAN)
             self._pad.addstr(ph-2, pw-42, down_str, CBOLD + CGREEN)
@@ -82,10 +82,10 @@ class NetView(view.View):
             if max_total > 0:
                 if max_up > 0:
                     height = int(math.ceil((1.0 * plot_height * max_up) / max_total))
-                    self._pad.addstr(plot_offset-height, 1, "{: 5.0f}kB/s".format(max_up//1024).rjust(10), CBOLD) 
+                    self._pad.addstr(plot_offset-height, 1, "{: 5.0f}kB/s".format(max_up//1024).rjust(10), CBOLD)
                 if max_down > 0:
                     height = int(math.ceil((1.0 * plot_height * max_down) / max_total))
-                    self._pad.addstr(plot_offset-1+height, 1, "{: 5.0f}kB/s".format(max_down//1024).rjust(10), CBOLD) 
+                    self._pad.addstr(plot_offset-1+height, 1, "{: 5.0f}kB/s".format(max_down//1024).rjust(10), CBOLD)
 
                 for i, delta in enumerate(deltas):
                     if i > chart_width:
