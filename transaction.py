@@ -69,9 +69,10 @@ class TransactionView(view.View):
         CYELLOW = curses.color_pair(5)
         CBOLD = curses.A_BOLD
 
-        self._pad.addstr(0, 1, "time {}".format(
-            isoformatseconds(datetime.datetime.utcfromtimestamp(transaction["time"]))
-        ), CBOLD)
+        if "time" in transaction:
+            self._pad.addstr(0, 1, "time {}".format(
+                isoformatseconds(datetime.datetime.utcfromtimestamp(transaction["time"]))
+            ), CBOLD)
         self._pad.addstr(1, 1, "size {}b".format(transaction["size"]), CBOLD)
         self._pad.addstr(1, 15, "vsize {}b".format(transaction["vsize"]), CBOLD)
         self._pad.addstr(2, 1, "locktime {}".format(transaction["locktime"]), CBOLD)
