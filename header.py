@@ -175,6 +175,18 @@ class HeaderView(object):
 
         await self.draw()
 
+    async def on_balances(self, key, obj):
+        try:
+            mine = obj["result"]["mine"]
+            bal = mine["trusted"]
+            ubal = mine["untrusted_pending"]
+            ibal = mine["immature"]
+            self._balance = (bal, ubal, ibal)
+        except (KeyError, TypeError):
+            self._balance = None
+
+        await self.draw()
+
     async def on_window_resize(self, y, x):
         # At the moment we ignore the x size and limit to 100.
         self._window_size = (y, x)

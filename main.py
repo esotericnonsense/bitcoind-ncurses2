@@ -113,14 +113,8 @@ def wallet_enabled(client):
         return True
 
     # Ugly, a synchronous RPC request mechanism would be nice here.
-    check = asyncio.gather(check_getwalletinfo(client))
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(check)
-
-    if check.result():
-        return True
-
-    return False
+    return loop.run_until_complete(check_getwalletinfo(client))
 
 
 def create_tasks(client, window, nosplash):
@@ -230,7 +224,7 @@ def create_tasks(client, window, nosplash):
 
     if wallet_enabled(client):
         tasks.append(
-            poll_client(client, "getwalletinfo", headerview.on_walletinfo, 1.0)
+            poll_client(client, "getbalances", headerview.on_balances, 1.0)
         )
 
     return tasks
